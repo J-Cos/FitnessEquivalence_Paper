@@ -1,3 +1,8 @@
+#------------------------------------
+# Script produces a simple map of the forest plots locations
+#----------------------------------
+
+
 library(tidyverse)
 library(terra)
 library(sf)
@@ -5,18 +10,10 @@ library(rnaturalearth)   # to get Brazil boundary
 library(tidyterra)    # tidyterra provides geom_spatvector for ggplot2
 
 
+# ---------------------------
+# 1) Load df
+# ---------------------------
 df<-read.csv("Data/env.csv") %>% as_tibble %>% filter(Biome=="Amazonia")
-
-
-# ---------------------------
-# 1) Replace this with your tibble (here I assume it's named `df`)
-# ---------------------------
-# Example: if your data already in object 'df', skip this block.
-# df <- readr::read_csv("your_data.csv")
-# Must have columns: Region, X (lon), Y (lat), fc2000
-
-# For demonstration I'll assume you have a tibble called `df`.
-# The code below operates on df; if your tibble is named differently, change it.
 
 # ---------------------------
 # 2) Summarise by Region
