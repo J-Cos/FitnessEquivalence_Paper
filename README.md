@@ -1,2 +1,2 @@
-# SN_Observation_Paper
+# Fitness Equivalence Paper
  
