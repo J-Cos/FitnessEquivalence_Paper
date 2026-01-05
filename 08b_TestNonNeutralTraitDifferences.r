@@ -1,6 +1,15 @@
+# --------------------------------------------
+# Purpose: Test nonneutral trait differences
+# Input Origin Scripts: 08_FitOverallSloanAndExtractNonneutralAbundances.r
+# Output: None (test results only)
+# ---------------------------------------------------
+
+
 library(tidyverse)
 library(ggplot2)
  library(ggsci)  # optional for nicer fill palette
+
+NonNeutrals<-read.csv("Outputs/NonNeutralTaxa.csv")
 
 # 1. prepare data (same as before)
 df_long <- NonNeutrals %>%

@@ -1,41 +1,57 @@
 # --------------------------------------------
-# Sript fits SEMs for forest cover sub group slon models (start rfom script before 08_fit forest cover subgroup sloans)
-# Outputs is a figure visualising the best model (mediation only model)
+# Purpose: Fits SEMs for CATS regression mediation
+# Input Origin Scripts: 03_FitEEOS.py; 05_FitCatsRegressions.r
+# Output: figure visualising the best model (mediation only model)
 # ---------------------------------------------------
 
+library(tidyverse)
+library(cowplot)
 library(lavaan)
+library(MuMIn)
+library(ggsci)
 
 
-df_modified <- df %>%
+d<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble
+CATS_df<-read.csv("Outputs/CatsOutput.csv") %>% select(Region_Plot, CATS_pois)
+
+plot_data<-d %>%
+    left_join(., read.csv("Data/env.csv")) %>%
+    left_join(CATS_df)
+
+plot_data[is.na(plot_data$fc2000),]$fc2000<-1
+
+plot_data <- plot_data %>%
   mutate(
-    fcmedian = if_else(region == "Jur", fcmedian - runif(n = sum(region == "Jur"), min = 0.0001, max = 0.01), fcmedian)
+    fc2000 = if_else(Region == "Jurua", fc2000 - runif(n = sum(Region == "Jurua"), min = 0.0001, max = 0.01), fc2000)
   ) %>%
-  mutate(fcmedian_c =scale(fcmedian, scale = FALSE)*100 ) %>%
   mutate(
-    disturbedcover = 1- fcmedian
+    disturbedcover = 1- fc2000
   ) %>%
-  mutate(region= factor(region, levels = c("Jur", "Bal","STM", "PGM"))) %>%
-  mutate(r2poisINV=1-r2pois)
+  mutate(absdev=abs(dev))%>% 
+  mutate(Region=factor(Region, levels=c("Jurua", "Balbina", "STM", "PGM"))) 
 
 
+
+
+# 11/9/25 - simple hypothesis testing structure
 mediation_only <- '
-  r2pois ~ disturbedcover
-  RMSE    ~ r2pois
+  CATS_pois ~ disturbedcover
+  absdev    ~ CATS_pois
 '
 
-fit_mediation_only <- sem(mediation_only, data=df_modified,
-                         group="region", meanstructure=TRUE,
+fit_mediation_only <- sem(mediation_only, data=plot_data,
+                         group="Region", meanstructure=TRUE,
                          group.equal="regressions",
                          estimator="ML")
 # --------------------------------------
 
 mediation_partial <- '
-  r2pois ~ disturbedcover
-  RMSE    ~ r2pois + disturbedcover
+  CATS_pois ~ disturbedcover
+  absdev    ~ CATS_pois + disturbedcover
 '
 
-fit_mediation_partial <- sem(mediation_partial, data=df_modified,
-                         group="region", meanstructure=TRUE,
+fit_mediation_partial <- sem(mediation_partial, data=plot_data,
+                         group="Region", meanstructure=TRUE,
                          group.equal="regressions",
                          estimator="ML")
 
@@ -45,19 +61,20 @@ lavTestLRT(fit_mediation_only, fit_mediation_partial)
 # --------------------------------------
 
 direct_only <- '
-  RMSE ~ disturbedcover
-  r2pois    ~ disturbedcover
+  absdev ~ disturbedcover
+  CATS_pois    ~ disturbedcover
 '
 
-fit_direct_only <- sem(direct_only, data=df_modified,
-                         group="region", meanstructure=TRUE,
+fit_direct_only <- sem(direct_only, data=plot_data,
+                         group="Region", meanstructure=TRUE,
                          group.equal=c("regressions", "residual.covariances" ),
                          estimator="ML")
 
 # basic fit measures to compare
-fitMeasures(fit_mediation_only, c("aic", "bic", "bic2", "logl","npar","ntotal"))
-fitMeasures(fit_mediation_partial, c("aic","bic", "bic2","logl","npar","ntotal"))
-fitMeasures(fit_direct_only, c("aic","bic", "bic2", "logl","npar","ntotal"))
+fitMeasures(fit_mediation_only, c("aic","bic","logl","npar","ntotal"))
+fitMeasures(fit_mediation_partial, c("aic","bic","logl","npar","ntotal"))
+fitMeasures(fit_direct_only, c("aic","bic","logl","npar","ntotal"))
+
 
 #AICc - not in lavaan so performed manually - note this is standard linear model formula
 correctAIC<-function(fit){
@@ -71,11 +88,10 @@ rl_dir<-exp(-(correctAIC(fit_direct_only)-correctAIC(fit_mediation_only))/2)
 
 rl_med/(rl_med+rl_par+rl_dir)
 
-AIC(fit_mediation_only, fit_mediation_partial, fit_direct_only)
 
+cor.test(plot_data$absdev, plot_data$CATS_pois)
 
 summary(fit_mediation_only, fit.measures = TRUE, standardized = TRUE, rsquare = TRUE)
-
 
 
 
@@ -113,42 +129,40 @@ coef_df <- regs %>%
 
 # panel A
 coef_CATS <- coef_df %>%
-  filter(outcome == "r2pois")
+  filter(outcome == "CATS_pois")
 
 # scatter + group-specific regression lines
-PanelA<-ggplot(df_modified, aes(x = disturbedcover, y = r2pois, color = region)) +
-  geom_point(alpha = 0.8, size=2) +
+PanelA<-ggplot(plot_data, aes(x = disturbedcover, y = CATS_pois, color = Region)) +
+  geom_point(alpha = 0.8, size=1) +
   geom_abline(data = coef_CATS,
               aes(intercept = intercept, slope = slope, color = region),
               size = 0.5) +
-  geom_hline(yintercept=0, linetype=2)+
   theme_classic()+
-  theme(legend.position = "none") +
-  scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
-  #scale_y_continuous(expand = c(0, 0), limits = c(0, NA))+
-  ylab("Poisson random sampling R2")+
-  xlab("Median disturbed forest cover in 2000m radius")+
+  theme(legend.position = "none")+
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
+  ylab("CATS regression R2")+
+  xlab("Disturbed forest cover (2000m radius)")+
   ggsci::scale_color_npg()
 
 # panel B
 coef_absdev <- coef_df %>%
-  filter(outcome == "RMSE")
+  filter(outcome == "absdev")
 
 # scatter + group-specific regression lines
-PanelB<-ggplot(df_modified, aes(x = r2pois, y = RMSE, color = region)) +
-  geom_point(alpha = 0.8, size=2) +
+PanelB<-ggplot(plot_data, aes(x = CATS_pois, y = absdev, color = Region)) +
+  geom_point(alpha = 0.8, size=1) +
   geom_abline(data = coef_absdev,
               aes(intercept = intercept, slope = slope, color = region),
               size = 0.5) +
-  geom_vline(xintercept=0, linetype=2)+
-  theme_classic() +
-  #scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, NA))+
-  xlab("Poisson random sampling R2")+
-  ylab("EEOS RMSE")+
+  theme_classic()+
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
+  xlab("CATS regression R2")+
+  ylab("EEOS absolute deviation")+
   ggsci::scale_color_npg()
 
 
 
 cowplot::plot_grid(PanelA, PanelB, labels = c('A', 'B'), rel_widths=c(0.82, 1))
-ggsave("Figures/Figure_H2c.png", height=6, width=12)
+ggsave("Figures/Figure_H2a.png", height=4, width=8)

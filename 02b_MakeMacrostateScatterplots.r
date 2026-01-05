@@ -1,4 +1,8 @@
-#Make EEOS Plots
+# --------------------------------------------
+# Purpose: Makes scatterplots of ecosystem macrostates (B, S, N E) 
+# Input Origin Scripts: 02_GetEcosystemMacrostates.R
+# Output: scatterplots of ecosystem macrostates
+# ---------------------------------------------------
 
 library(ggplot2)
 library(cowplot)
@@ -83,7 +87,7 @@ pairwise_lower_triangle <- function(data, vars) {
 }
 
 
-d<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble
+d<-read.csv("Outputs/MacrostatesHarteWD.csv") %>% as_tibble
 
 pairwise_lower_triangle(d, c("N", "S", "B", "E"))
 ggsave("Figures/FigureS1.png", bg="white", height=8, width=8)

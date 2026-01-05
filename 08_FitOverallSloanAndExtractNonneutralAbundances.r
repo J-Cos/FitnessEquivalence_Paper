@@ -1,13 +1,13 @@
 # --------------------------------------------
-# Sript fits overall sloan models (Poisson random sampling fits best) and extracts non neutral abundance
-# Output is 2 figures (example sloan model fits and violins of the sloan average fits); and a csv of the nonneutral abundances
+# Purpose: Fit overall Sloan models and extract nonneutral abundances
+# Input Origin Scripts: 01_CombinePinho&JuaraData.R; 07_GetPlotSubsets.r
+# Output: csvs of nonneutral abundances and taxa & visualisations
 # ---------------------------------------------------
 
 library(tidyverse)
 source("Code/Functions/runPermutationTest().r")
 
 plotSubsets_l<-readRDS("Outputs/PlotSubsets.RDS")
-sampleSize=29#37 - 30 is the number expected from Juara, 37 is the number in Balbina
     # 2.1) get 100 replicate neutral model fits
     df<-data.frame(seed=NA, region=NA, r2=NA, m=NA)
     df_taxa<-data.frame(sp=NA, Neutrality=NA, region=NA)
@@ -226,3 +226,4 @@ NonNeutralProportions<-comm %>%
     select(Region_Plot, proportionNonNeutral)
 
 write.csv(NonNeutralProportions, "Outputs/NonNeutralProportions.csv")
+write.csv(NonNeutrals, "Outputs/NonNeutralTaxa.csv")

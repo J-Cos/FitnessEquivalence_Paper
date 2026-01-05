@@ -1,10 +1,12 @@
-# ---------------------
-# Script combines the Jurua data with the Pinho et al data, applying various data merging validations
-# Output is new comm and traits csvs in the Outputs directory.
-# ----------------------------
+# --------------------------------------------
+# Purpose: Combines the Jurua data with the Pinho et al data, applying various data merging validations
+# Input Origin Scripts: None
+# Output: new comm and traits csvs in the Outputs directory.
+# ---------------------------------------------------
+
 library(tidyverse)
 
-#Functions
+# Functions
 # Function to compute Hamming distance (character-wise differences)
 hamming_distance <- function(a, b) {
   if (nchar(a) != nchar(b)) return(Inf)
@@ -29,18 +31,13 @@ strings_with_n_diff <- function(vec, n) {
 }
 
 
+# Load data
 j<-read.csv("Data/Jurua_Flora_FullDB.csv") %>% 
         as_tibble %>%
         filter(DBH>=10)
-
-
 comm<-read.csv("Data/comm.csv") %>% as_tibble %>% filter(Region %in% c("Balbina", "PGM", "STM"))
-
 traits<-read.csv("Data/traits.csv") %>% as_tibble
 
-
-str(j)
-str(comm)
 
 ##########################################################
 # comm

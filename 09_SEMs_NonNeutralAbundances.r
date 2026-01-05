@@ -1,19 +1,23 @@
 # --------------------------------------------
-# Sript fits SEMs for CATS regression mediation
-# Outputs is a figure visualising the best model (mediation only model)
+# Purpose: Fits SEMs for nonneutral abundance mediation
+# Input Origin Scripts: 03_FitEEOS.py; 08_FitOverallSloanAndExtractNonneutralAbundances.r
+# Output: figure visualising best model
 # ---------------------------------------------------
 
 
 library(tidyverse)
 library(cowplot)
+library(lavaan)
+library(MuMIn)
 
 
+#load data
 d<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble
-CATS_df<-read.csv("Outputs/CatsOutput.csv") %>% select(Region_Plot, CATS_pois)
-
+NonNeutralProportions<-read.csv("Outputs/NonNeutralProportions.csv") %>% select(Region_Plot, proportionNonNeutral)
 plot_data<-d %>%
     left_join(., read.csv("Data/env.csv")) %>%
-    left_join(CATS_df)
+    left_join(NonNeutralProportions)
+
 
 plot_data[is.na(plot_data$fc2000),]$fc2000<-1
 
@@ -25,20 +29,21 @@ plot_data <- plot_data %>%
     disturbedcover = 1- fc2000
   ) %>%
   mutate(absdev=abs(dev))%>% 
-  mutate(Region=factor(Region, levels=c("Jurua", "Balbina", "STM", "PGM"))) 
+  mutate(Region=factor(Region, levels=c("Jurua", "Balbina", "STM", "PGM")))# %>%
+   # filter(Region!="Jurua")
 
 
-  library(MuMIn)
-
+ggplot(plot_data, aes(y=absdev, x=proportionNonNeutral, color=Region))+
+    geom_point()+
+    geom_smooth(method="lm")
 
 
 
 # 11/9/25 - simple hypothesis testing structure
-library(lavaan)
 
 mediation_only <- '
-  CATS_pois ~ disturbedcover
-  absdev    ~ CATS_pois
+  proportionNonNeutral ~ disturbedcover
+  absdev    ~ proportionNonNeutral
 '
 
 fit_mediation_only <- sem(mediation_only, data=plot_data,
@@ -48,8 +53,8 @@ fit_mediation_only <- sem(mediation_only, data=plot_data,
 # --------------------------------------
 
 mediation_partial <- '
-  CATS_pois ~ disturbedcover
-  absdev    ~ CATS_pois + disturbedcover
+  proportionNonNeutral ~ disturbedcover
+  absdev    ~ proportionNonNeutral + disturbedcover
 '
 
 fit_mediation_partial <- sem(mediation_partial, data=plot_data,
@@ -64,7 +69,7 @@ lavTestLRT(fit_mediation_only, fit_mediation_partial)
 
 direct_only <- '
   absdev ~ disturbedcover
-  CATS_pois    ~ disturbedcover
+  proportionNonNeutral    ~ disturbedcover
 '
 
 fit_direct_only <- sem(direct_only, data=plot_data,
@@ -77,7 +82,7 @@ fitMeasures(fit_mediation_only, c("aic","bic","logl","npar","ntotal"))
 fitMeasures(fit_mediation_partial, c("aic","bic","logl","npar","ntotal"))
 fitMeasures(fit_direct_only, c("aic","bic","logl","npar","ntotal"))
 
-
+ 
 #AICc - not in lavaan so performed manually - note this is standard linear model formula
 correctAIC<-function(fit){
   mes<-fitMeasures(fit, c("aic","npar","ntotal"))
@@ -90,8 +95,8 @@ rl_dir<-exp(-(correctAIC(fit_direct_only)-correctAIC(fit_mediation_only))/2)
 
 rl_med/(rl_med+rl_par+rl_dir)
 
+AIC(fit_mediation_only, fit_mediation_partial, fit_direct_only)
 
-cor.test(plot_data$absdev, plot_data$CATS_pois)
 
 summary(fit_mediation_only, fit.measures = TRUE, standardized = TRUE, rsquare = TRUE)
 
@@ -131,20 +136,20 @@ coef_df <- regs %>%
 
 # panel A
 coef_CATS <- coef_df %>%
-  filter(outcome == "CATS_pois")
+  filter(outcome == "proportionNonNeutral")
 
 # scatter + group-specific regression lines
-PanelA<-ggplot(plot_data, aes(x = disturbedcover, y = CATS_pois, color = Region)) +
+PanelA<-ggplot(plot_data, aes(x = disturbedcover, y = proportionNonNeutral, color = Region)) +
   geom_point(alpha = 0.8, size=1) +
   geom_abline(data = coef_CATS,
               aes(intercept = intercept, slope = slope, color = region),
               size = 0.5) +
   theme_classic()+
-  theme(legend.position = "none")+
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
-  ylab("CATS regression R2")+
-  xlab("Disturbed forest cover in 2000m radius")+
+  theme(legend.position = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.075)), limits = c(0, NA)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, NA))+
+  ylab("Relative abundance of non-neutral taxa")+
+  xlab("Median disturbed forest cover\n(2000m radius)")+
   ggsci::scale_color_npg()
 
 # panel B
@@ -152,19 +157,21 @@ coef_absdev <- coef_df %>%
   filter(outcome == "absdev")
 
 # scatter + group-specific regression lines
-PanelB<-ggplot(plot_data, aes(x = CATS_pois, y = absdev, color = Region)) +
+PanelB<-ggplot(plot_data, aes(x = proportionNonNeutral, y = absdev, color = Region)) +
   geom_point(alpha = 0.8, size=1) +
   geom_abline(data = coef_absdev,
               aes(intercept = intercept, slope = slope, color = region),
               size = 0.5) +
-  theme_classic()+
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
-  xlab("CATS regression R2")+
+  #geom_vline(xintercept=0, linetype=2)+
+  theme_classic() +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, NA)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, NA))+
+  xlab("Relative abundance of\nnon-neutral taxa")+
   ylab("EEOS absolute deviation")+
   ggsci::scale_color_npg()
 
 
 
+
 cowplot::plot_grid(PanelA, PanelB, labels = c('A', 'B'), rel_widths=c(0.82, 1))
-ggsave("Figures/Figure_H2a.png", height=6, width=12)
+ggsave("Figures/Figure_H2b.png", height=4, width=8)
