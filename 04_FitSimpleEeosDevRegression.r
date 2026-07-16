@@ -15,24 +15,10 @@ library(MASS)
 
 
 
+source("Code/Functions/revision_helpers.R")
 set.seed(1)
-d<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble
+plot_data <- load_and_prepare_plot_data()
 
-
-plot_data<-d %>%
-    left_join(., read.csv("Data/env.csv"))
-
-plot_data[is.na(plot_data$fc2000),]$fc2000<-1
-
-plot_data <- plot_data %>%
-  mutate(
-    fc2000 = if_else(Region == "Jurua", fc2000 - runif(n = sum(Region == "Jurua"), min = 0.0001, max = 0.01), fc2000)
-  ) %>%
-  mutate(
-    disturbedcover = 1- fc2000
-  ) %>%
-  mutate(absdev=abs(dev))%>% 
-  mutate(Region=factor(Region, levels=c("Jurua", "Balbina", "STM", "PGM")))
 
 
 
@@ -139,11 +125,15 @@ getCoefDataframe<-function(fit){
 
 coef_df<-getCoefDataframe(fit)
 
+marg_absdev <- get_marginal_predictions(plot_data, outcome = "absdev", predictor = "disturbedcover")
+
 pa<-ggplot(plot_data, aes(x = disturbedcover, y = absdev, color = Region)) +
+  geom_ribbon(data = marg_absdev, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
+  geom_line(data = marg_absdev, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size=0.5) +
   geom_abline(data = coef_df,
               aes(intercept = intercept, slope = slope, color = region),
-              size = 0.5) +
+              linewidth = 0.5) +
   theme_classic()+
   scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
@@ -295,11 +285,15 @@ ggsave("Figures/Figure_H1.png", height=4, width=6, bg="white", dpi=1000)
 
 coef_signed_df<-getCoefDataframe(fit_signed)
 
+marg_signed <- get_marginal_predictions(plot_data, outcome = "dev", predictor = "disturbedcover")
+
 p2a<-ggplot(plot_data, aes(x = disturbedcover, y = dev, color = Region)) +
+  geom_ribbon(data = marg_signed, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
+  geom_line(data = marg_signed, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size=0.5) +
   geom_abline(data = coef_signed_df,
               aes(intercept = intercept, slope = slope, color = region),
-              size = 0.5) +
+              linewidth = 0.5) +
   theme_classic()+
   geom_hline(yintercept=0, linetype=2)+
   scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
