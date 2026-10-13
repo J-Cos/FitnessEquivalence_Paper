@@ -70,11 +70,8 @@ marg_devmedian <- get_marginal_predictions(df_modified, outcome = "devmedian", p
 # panel A
 PanelA <- ggplot(df_modified, aes(x = disturbedcover, y = r2pois, color = region)) +
   geom_ribbon(data = marg_CATS, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_CATS, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_CATS, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size = 1) +
-  geom_abline(data = coef_CATS,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   geom_hline(yintercept = 0, linetype = 2) +
   theme_classic() +
   theme(legend.position = "none") +
@@ -86,11 +83,8 @@ PanelA <- ggplot(df_modified, aes(x = disturbedcover, y = r2pois, color = region
 # panel B
 PanelB <- ggplot(df_modified, aes(x = r2pois, y = devmedian, color = region)) +
   geom_ribbon(data = marg_devmedian, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_devmedian, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_devmedian, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size = 1) +
-  geom_abline(data = coef_devmedian,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   geom_vline(xintercept = 0, linetype = 2) +
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
   theme_classic() +

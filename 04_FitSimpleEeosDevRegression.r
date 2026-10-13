@@ -132,11 +132,8 @@ marg_absdev <- get_marginal_predictions(plot_data, outcome = "absdev", predictor
 
 pa<-ggplot(plot_data, aes(x = disturbedcover, y = absdev, color = Region)) +
   geom_ribbon(data = marg_absdev, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_absdev, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_absdev, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size=0.5) +
-  geom_abline(data = coef_df,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   theme_classic()+
   scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
@@ -256,11 +253,8 @@ marg_signed <- get_marginal_predictions(plot_data, outcome = "dev", predictor = 
 
 p2a <- ggplot(plot_data, aes(x = disturbedcover, y = dev, color = Region)) +
   geom_ribbon(data = marg_signed, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_signed, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_signed, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size = 0.5) +
-  geom_abline(data = coef_signed_df,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   theme_classic() +
   geom_hline(yintercept = 0, linetype = "dotted") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +

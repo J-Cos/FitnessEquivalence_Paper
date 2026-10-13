@@ -70,11 +70,8 @@ marg_dev <- get_marginal_predictions(plot_data, outcome = "dev", predictor = "pr
 # panel A
 PanelA <- ggplot(plot_data, aes(x = disturbedcover, y = proportionNonNeutral, color = Region)) +
   geom_ribbon(data = marg_CATS, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_CATS, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_CATS, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size = 1) +
-  geom_abline(data = coef_CATS,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   theme_classic() +
   theme(legend.position = "none") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.075)), limits = c(0, NA)) +
@@ -86,11 +83,8 @@ PanelA <- ggplot(plot_data, aes(x = disturbedcover, y = proportionNonNeutral, co
 # panel B
 PanelB <- ggplot(plot_data, aes(x = proportionNonNeutral, y = dev, color = Region)) +
   geom_ribbon(data = marg_dev, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
-  geom_line(data = marg_dev, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
+  geom_line(data = marg_dev, aes(x = x, y = y), color = "black", linewidth = 0.8, inherit.aes = FALSE) +
   geom_point(alpha = 0.8, size = 1) +
-  geom_abline(data = coef_dev,
-              aes(intercept = intercept, slope = slope, color = region),
-              linewidth = 0.5) +
   theme_classic() +
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, NA)) +
