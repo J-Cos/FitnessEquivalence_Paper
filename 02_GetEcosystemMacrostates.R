@@ -12,21 +12,64 @@ traits<-read.csv("Outputs/traits.csv") %>% as_tibble
 
 # get macrostates, following Harte, making use of wood density trait
 
-# Option 4: Quadratic + WD (Metabolism-First)
+# Option 2 (Primary): Harte et al. (2022) Linear + Mean-Centered WD
+OrganismStats_harte_wd <- comm %>%
+    left_join(select(traits, Binomial_correct, Hmax, WD), by = "Binomial_correct") %>%
+    mutate(minDBH = min(DBH, na.rm = TRUE)) %>%
+    mutate(e = DBH / minDBH) %>%
+    mutate(scaledWD = as.numeric(scale(WD, scale = FALSE, center = (mean(WD, na.rm = TRUE) - 1)))) %>%
+    mutate(m = (e^(4/3)) * scaledWD) %>%
+    select(Region, Region_Plot, Binomial_correct, m, e, WD)
+
+Macrostates_harte_wd <- OrganismStats_harte_wd %>%
+    group_by(Region, Region_Plot) %>%
+    summarise(
+        N = n(),
+        S = length(unique(Binomial_correct)),
+        B = sum(m, na.rm = TRUE),
+        E = sum(e, na.rm = TRUE),
+        .groups = "drop"
+    )
+
+write.csv(Macrostates_harte_wd, "Outputs/MacrostatesHarteWD_harte_wd.csv", row.names = FALSE)
+write.csv(Macrostates_harte_wd, "Outputs/MacrostatesHarteWD.csv", row.names = FALSE)
+
+# Option 1: Harte et al. (2022) Linear, No WD
+OrganismStats_harte_nowd <- comm %>%
+    left_join(select(traits, Binomial_correct, Hmax, WD), by = "Binomial_correct") %>%
+    mutate(minDBH = min(DBH, na.rm = TRUE)) %>%
+    mutate(e = DBH / minDBH) %>%
+    mutate(m = e^(4/3)) %>%
+    select(Region, Region_Plot, Binomial_correct, m, e, WD)
+
+Macrostates_harte_nowd <- OrganismStats_harte_nowd %>%
+    group_by(Region, Region_Plot) %>%
+    summarise(
+        N = n(),
+        S = length(unique(Binomial_correct)),
+        B = sum(m, na.rm = TRUE),
+        E = sum(e, na.rm = TRUE),
+        .groups = "drop"
+    )
+
+write.csv(Macrostates_harte_nowd, "Outputs/MacrostatesHarteWD_harte_nowd.csv", row.names = FALSE)
+
+# Option 4: Quadratic + Mean-Centered WD (Metabolism-First)
 OrganismStats_quad_wd <- comm %>%
     left_join(select(traits, Binomial_correct, Hmax, WD), by = "Binomial_correct") %>%
     mutate(minDBH = min(DBH, na.rm = TRUE)) %>%
-    mutate(e = (DBH/minDBH)^2) %>%
-    mutate(m = e^(4/3) * (WD / min(WD, na.rm = TRUE))) %>%
+    mutate(e = (DBH / minDBH)^2) %>%
+    mutate(scaledWD = as.numeric(scale(WD, scale = FALSE, center = (mean(WD, na.rm = TRUE) - 1)))) %>%
+    mutate(m = (e^(4/3)) * scaledWD) %>%
     select(Region, Region_Plot, Binomial_correct, m, e, WD)
 
 Macrostates_quad_wd <- OrganismStats_quad_wd %>%
     group_by(Region, Region_Plot) %>%
     summarise(
-        N=n(), 
-        S=length(unique(Binomial_correct)),
-        B=sum(m, na.rm=TRUE),
-        E=sum(e, na.rm=TRUE),
+        N = n(),
+        S = length(unique(Binomial_correct)),
+        B = sum(m, na.rm = TRUE),
+        E = sum(e, na.rm = TRUE),
         .groups = "drop"
     )
 
@@ -36,38 +79,39 @@ write.csv(Macrostates_quad_wd, "Outputs/MacrostatesHarteWD_quad_wd.csv", row.nam
 OrganismStats_quad_nowd <- comm %>%
     left_join(select(traits, Binomial_correct, Hmax, WD), by = "Binomial_correct") %>%
     mutate(minDBH = min(DBH, na.rm = TRUE)) %>%
-    mutate(e = (DBH/minDBH)^2) %>%
+    mutate(e = (DBH / minDBH)^2) %>%
     mutate(m = e^(4/3)) %>%
     select(Region, Region_Plot, Binomial_correct, m, e, WD)
 
 Macrostates_quad_nowd <- OrganismStats_quad_nowd %>%
     group_by(Region, Region_Plot) %>%
     summarise(
-        N=n(), 
-        S=length(unique(Binomial_correct)),
-        B=sum(m, na.rm=TRUE),
-        E=sum(e, na.rm=TRUE),
+        N = n(),
+        S = length(unique(Binomial_correct)),
+        B = sum(m, na.rm = TRUE),
+        E = sum(e, na.rm = TRUE),
         .groups = "drop"
     )
 
 write.csv(Macrostates_quad_nowd, "Outputs/MacrostatesHarteWD_quad_nowd.csv", row.names = FALSE)
 
-# Option 6: Volume-Corrected Chave Hybrid
+# Option 6: Volume-Corrected Chave Hybrid (with Mean-Centered WD)
 OrganismStats_chave <- comm %>%
     left_join(select(traits, Binomial_correct, Hmax, WD), by = "Binomial_correct") %>%
     mutate(minDBH = min(DBH, na.rm = TRUE)) %>%
     mutate(D = DBH / minDBH) %>%
-    mutate(m = ((WD / min(WD, na.rm = TRUE))^0.976) * D^2.673 * exp(-0.0299 * (log(D))^2)) %>%
+    mutate(scaledWD = as.numeric(scale(WD, scale = FALSE, center = (mean(WD, na.rm = TRUE) - 1)))) %>%
+    mutate(m = (scaledWD^0.976) * D^2.673 * exp(-0.0299 * (log(D))^2)) %>%
     mutate(e = D^(2.673 * 0.75) * exp(-0.0299 * 0.75 * (log(D))^2)) %>%
     select(Region, Region_Plot, Binomial_correct, m, e, WD)
 
 Macrostates_chave <- OrganismStats_chave %>%
     group_by(Region, Region_Plot) %>%
     summarise(
-        N=n(), 
-        S=length(unique(Binomial_correct)),
-        B=sum(m, na.rm=TRUE),
-        E=sum(e, na.rm=TRUE),
+        N = n(),
+        S = length(unique(Binomial_correct)),
+        B = sum(m, na.rm = TRUE),
+        E = sum(e, na.rm = TRUE),
         .groups = "drop"
     )
 

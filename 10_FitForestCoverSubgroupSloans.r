@@ -7,7 +7,7 @@
 library(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
-suffix <- if (length(args) > 0) args[1] else "chave"
+suffix <- if (length(args) > 0) args[1] else "harte_wd"
 
 # 1) load data
 orderedPlotSubsets_l<-readRDS("Outputs/NonOverlappingOrderedPlotSubsets.RDS")
@@ -134,5 +134,8 @@ df[is.na(df$fcmedian),]$fcmedian<-1
 
 
 write.csv(df, paste0("Outputs/ForestCoverSubgroupSloanFits_", suffix, ".csv"), row.names = FALSE)
+if (suffix == "harte_wd") {
+    write.csv(df, "Outputs/ForestCoverSubgroupSloanFits.csv", row.names = FALSE)
+}
 
 

@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 
 
 # Read suffix from command line arguments
-suffix = sys.argv[1] if len(sys.argv) > 1 else "chave"
+suffix = sys.argv[1] if len(sys.argv) > 1 else "harte_wd"
 
 # Read CSV
 df = pd.read_csv(f"Outputs/MacrostatesHarteWD_{suffix}.csv")
@@ -35,3 +35,5 @@ df['dev'] = np.log(df['B'])-np.log(df['B_pred'])
 
 # Save to new CSV
 df.to_csv(f"Outputs/EEOSPredsHarteWD_{suffix}.csv", index=False)
+if suffix == "harte_wd":
+    df.to_csv("Outputs/EEOSPredsHarteWD.csv", index=False)

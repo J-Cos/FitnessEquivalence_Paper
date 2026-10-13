@@ -115,80 +115,127 @@ for (opt_name in names(options_list)) {
   plot_data <- load_and_prepare_plot_data(suffix = "sens")
   df_modified <- load_and_prepare_subgroup_data(suffix = "sens")
   
-  # 5. Fit simple deviation regression (H1)
+  # 5. Baseline EEoS accuracy in undisturbed Jurua
+  jurua_df <- plot_data %>% filter(Region == "Jurua")
+  jurua_mean_dev <- mean(jurua_df$dev, na.rm = TRUE)
+  jurua_mean_absdev <- mean(jurua_df$absdev, na.rm = TRUE)
+
+  # 6. Fit simple deviation regressions (H1: Signed and Absolute)
   fit_signed <- lm(dev ~ disturbedcover + Region, data = plot_data)
-  s_signed <- summary(fit_signed)
-  coef_signed <- s_signed$coefficients
-  h1_slope <- coef_signed["disturbedcover", "Estimate"]
-  h1_p <- coef_signed["disturbedcover", "Pr(>|t|)"]
+  coef_signed <- summary(fit_signed)$coefficients
+  h1_sig_slope <- coef_signed["disturbedcover", "Estimate"]
+  h1_sig_p <- coef_signed["disturbedcover", "Pr(>|t|)"]
+
+  fit_abs <- lm(absdev ~ disturbedcover + Region, data = plot_data)
+  coef_abs <- summary(fit_abs)$coefficients
+  h1_abs_slope <- coef_abs["disturbedcover", "Estimate"]
+  h1_abs_p <- coef_abs["disturbedcover", "Pr(>|t|)"]
   
-  # 6. Fit CATS Regression SEM (H2a)
-  model_h2a <- '
-    CATS_pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM
-    dev ~ CATS_pois + Reg_Balbina + Reg_STM + Reg_PGM
-  '
-  fit_h2a <- sem(model_h2a, data = plot_data, estimator = "ML", meanstructure = TRUE)
-  est_h2a <- parameterEstimates(fit_h2a)
-  p1_h2a_slope <- est_h2a %>% filter(lhs == "CATS_pois", op == "~", rhs == "disturbedcover") %>% pull(est)
-  p1_h2a_p <- est_h2a %>% filter(lhs == "CATS_pois", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
-  p2_h2a_slope <- est_h2a %>% filter(lhs == "dev", op == "~", rhs == "CATS_pois") %>% pull(est)
-  p2_h2a_p <- est_h2a %>% filter(lhs == "dev", op == "~", rhs == "CATS_pois") %>% pull(pvalue)
+  # 7. Fit CATS Regression SEMs (H2a: Signed and Absolute)
+  fit_h2a_sig <- sem('CATS_pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n dev ~ CATS_pois + Reg_Balbina + Reg_STM + Reg_PGM', data = plot_data, estimator = "ML", meanstructure = TRUE)
+  est_h2a_sig <- parameterEstimates(fit_h2a_sig)
+  p1_h2a_slope <- est_h2a_sig %>% filter(lhs == "CATS_pois", op == "~", rhs == "disturbedcover") %>% pull(est)
+  p1_h2a_p <- est_h2a_sig %>% filter(lhs == "CATS_pois", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
+  p2_h2a_sig_slope <- est_h2a_sig %>% filter(lhs == "dev", op == "~", rhs == "CATS_pois") %>% pull(est)
+  p2_h2a_sig_p <- est_h2a_sig %>% filter(lhs == "dev", op == "~", rhs == "CATS_pois") %>% pull(pvalue)
+  fm_h2a_sig_p <- as.numeric(fitMeasures(fit_h2a_sig, "pvalue"))
+
+  fit_h2a_abs <- sem('CATS_pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n absdev ~ CATS_pois + Reg_Balbina + Reg_STM + Reg_PGM', data = plot_data, estimator = "ML", meanstructure = TRUE)
+  est_h2a_abs <- parameterEstimates(fit_h2a_abs)
+  p2_h2a_abs_slope <- est_h2a_abs %>% filter(lhs == "absdev", op == "~", rhs == "CATS_pois") %>% pull(est)
+  p2_h2a_abs_p <- est_h2a_abs %>% filter(lhs == "absdev", op == "~", rhs == "CATS_pois") %>% pull(pvalue)
+  fm_h2a_abs_p <- as.numeric(fitMeasures(fit_h2a_abs, "pvalue"))
   
-  # 7. Fit Non-Neutral % SEM (H2b)
-  model_h2b <- '
-    proportionNonNeutral ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM
-    dev ~ proportionNonNeutral + Reg_Balbina + Reg_STM + Reg_PGM
-  '
-  fit_h2b <- sem(model_h2b, data = plot_data, estimator = "ML", meanstructure = TRUE)
-  est_h2b <- parameterEstimates(fit_h2b)
-  p1_h2b_slope <- est_h2b %>% filter(lhs == "proportionNonNeutral", op == "~", rhs == "disturbedcover") %>% pull(est)
-  p1_h2b_p <- est_h2b %>% filter(lhs == "proportionNonNeutral", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
-  p2_h2b_slope <- est_h2b %>% filter(lhs == "dev", op == "~", rhs == "proportionNonNeutral") %>% pull(est)
-  p2_h2b_p <- est_h2b %>% filter(lhs == "dev", op == "~", rhs == "proportionNonNeutral") %>% pull(pvalue)
+  # 8. Fit Non-Neutral % SEMs (H2b: Signed and Absolute)
+  fit_h2b_sig <- sem('proportionNonNeutral ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n dev ~ proportionNonNeutral + Reg_Balbina + Reg_STM + Reg_PGM', data = plot_data, estimator = "ML", meanstructure = TRUE)
+  est_h2b_sig <- parameterEstimates(fit_h2b_sig)
+  p1_h2b_slope <- est_h2b_sig %>% filter(lhs == "proportionNonNeutral", op == "~", rhs == "disturbedcover") %>% pull(est)
+  p1_h2b_p <- est_h2b_sig %>% filter(lhs == "proportionNonNeutral", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
+  p2_h2b_sig_slope <- est_h2b_sig %>% filter(lhs == "dev", op == "~", rhs == "proportionNonNeutral") %>% pull(est)
+  p2_h2b_sig_p <- est_h2b_sig %>% filter(lhs == "dev", op == "~", rhs == "proportionNonNeutral") %>% pull(pvalue)
+  fm_h2b_sig_p <- as.numeric(fitMeasures(fit_h2b_sig, "pvalue"))
+
+  fit_h2b_abs <- sem('proportionNonNeutral ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n absdev ~ proportionNonNeutral + Reg_Balbina + Reg_STM + Reg_PGM', data = plot_data, estimator = "ML", meanstructure = TRUE)
+  est_h2b_abs <- parameterEstimates(fit_h2b_abs)
+  p2_h2b_abs_slope <- est_h2b_abs %>% filter(lhs == "absdev", op == "~", rhs == "proportionNonNeutral") %>% pull(est)
+  p2_h2b_abs_p <- est_h2b_abs %>% filter(lhs == "absdev", op == "~", rhs == "proportionNonNeutral") %>% pull(pvalue)
+  fm_h2b_abs_p <- as.numeric(fitMeasures(fit_h2b_abs, "pvalue"))
   
-  # 8. Fit Subgroup Sloan SEM (H2c)
-  model_h2c <- '
-    r2pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM
-    devmedian ~ r2pois + Reg_Balbina + Reg_STM + Reg_PGM
-  '
-  fit_h2c <- sem(model_h2c, data = df_modified, estimator = "ML", meanstructure = TRUE)
-  est_h2c <- parameterEstimates(fit_h2c)
-  p1_h2c_slope <- est_h2c %>% filter(lhs == "r2pois", op == "~", rhs == "disturbedcover") %>% pull(est)
-  p1_h2c_p <- est_h2c %>% filter(lhs == "r2pois", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
-  p2_h2c_slope <- est_h2c %>% filter(lhs == "devmedian", op == "~", rhs == "r2pois") %>% pull(est)
-  p2_h2c_p <- est_h2c %>% filter(lhs == "devmedian", op == "~", rhs == "r2pois") %>% pull(pvalue)
+  # 9. Fit Subgroup Sloan SEMs (H2c: Signed devmedian and RMSE)
+  fit_h2c_sig <- sem('r2pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n devmedian ~ r2pois + Reg_Balbina + Reg_STM + Reg_PGM', data = df_modified, estimator = "ML", meanstructure = TRUE)
+  est_h2c_sig <- parameterEstimates(fit_h2c_sig)
+  p1_h2c_slope <- est_h2c_sig %>% filter(lhs == "r2pois", op == "~", rhs == "disturbedcover") %>% pull(est)
+  p1_h2c_p <- est_h2c_sig %>% filter(lhs == "r2pois", op == "~", rhs == "disturbedcover") %>% pull(pvalue)
+  p2_h2c_sig_slope <- est_h2c_sig %>% filter(lhs == "devmedian", op == "~", rhs == "r2pois") %>% pull(est)
+  p2_h2c_sig_p <- est_h2c_sig %>% filter(lhs == "devmedian", op == "~", rhs == "r2pois") %>% pull(pvalue)
+  fm_h2c_sig_p <- as.numeric(fitMeasures(fit_h2c_sig, "pvalue"))
+
+  fit_h2c_abs <- sem('r2pois ~ disturbedcover + Reg_Balbina + Reg_STM + Reg_PGM\n RMSE ~ r2pois + Reg_Balbina + Reg_STM + Reg_PGM', data = df_modified, estimator = "ML", meanstructure = TRUE)
+  est_h2c_abs <- parameterEstimates(fit_h2c_abs)
+  p2_h2c_abs_slope <- est_h2c_abs %>% filter(lhs == "RMSE", op == "~", rhs == "r2pois") %>% pull(est)
+  p2_h2c_abs_p <- est_h2c_abs %>% filter(lhs == "RMSE", op == "~", rhs == "r2pois") %>% pull(pvalue)
+  fm_h2c_abs_p <- as.numeric(fitMeasures(fit_h2c_abs, "pvalue"))
   
   # Store results
   results[[opt_name]] <- list(
-    H1_Slope = h1_slope, H1_P = h1_p,
+    Jurua_dev = jurua_mean_dev, Jurua_absdev = jurua_mean_absdev,
+    H1_Sig_Slope = h1_sig_slope, H1_Sig_P = h1_sig_p,
+    H1_Abs_Slope = h1_abs_slope, H1_Abs_P = h1_abs_p,
     H2a_P1_Slope = p1_h2a_slope, H2a_P1_P = p1_h2a_p,
-    H2a_P2_Slope = p2_h2a_slope, H2a_P2_P = p2_h2a_p,
+    H2a_P2_Sig_Slope = p2_h2a_sig_slope, H2a_P2_Sig_P = p2_h2a_sig_p, H2a_FM_Sig_P = fm_h2a_sig_p,
+    H2a_P2_Abs_Slope = p2_h2a_abs_slope, H2a_P2_Abs_P = p2_h2a_abs_p, H2a_FM_Abs_P = fm_h2a_abs_p,
     H2b_P1_Slope = p1_h2b_slope, H2b_P1_P = p1_h2b_p,
-    H2b_P2_Slope = p2_h2b_slope, H2b_P2_P = p2_h2b_p,
+    H2b_P2_Sig_Slope = p2_h2b_sig_slope, H2b_P2_Sig_P = p2_h2b_sig_p, H2b_FM_Sig_P = fm_h2b_sig_p,
+    H2b_P2_Abs_Slope = p2_h2b_abs_slope, H2b_P2_Abs_P = p2_h2b_abs_p, H2b_FM_Abs_P = fm_h2b_abs_p,
     H2c_P1_Slope = p1_h2c_slope, H2c_P1_P = p1_h2c_p,
-    H2c_P2_Slope = p2_h2c_slope, H2c_P2_P = p2_h2c_p
+    H2c_P2_Sig_Slope = p2_h2c_sig_slope, H2c_P2_Sig_P = p2_h2c_sig_p, H2c_FM_Sig_P = fm_h2c_sig_p,
+    H2c_P2_Abs_Slope = p2_h2c_abs_slope, H2c_P2_Abs_P = p2_h2c_abs_p, H2c_FM_Abs_P = fm_h2c_abs_p
   )
 }
 
-# Compile and print summary table
-cat("\n\n=========================================================\n")
-cat("SENSITIVITY ANALYSIS RESULTS (SIGNED DEVIATION)\n")
-cat("=========================================================\n\n")
-
-df_results <- do.call(rbind, lapply(names(results), function(n) {
+# Compile and print summary tables
+df_abs <- do.call(rbind, lapply(names(results), function(n) {
   r <- results[[n]]
   data.frame(
     Model = n,
-    H1_slope = sprintf("%.4f (p=%.4f)", r$H1_Slope, r$H1_P),
-    H2a_path1 = sprintf("%.4f (p=%.4f)", r$H2a_P1_Slope, r$H2a_P1_P),
-    H2a_path2 = sprintf("%.4f (p=%.4f)", r$H2a_P2_Slope, r$H2a_P2_P),
-    H2b_path1 = sprintf("%.4f (p=%.4f)", r$H2b_P1_Slope, r$H2b_P1_P),
-    H2b_path2 = sprintf("%.4f (p=%.4f)", r$H2b_P2_Slope, r$H2b_P2_P),
-    H2c_path1 = sprintf("%.4f (p=%.4f)", r$H2c_P1_Slope, r$H2c_P1_P),
-    H2c_path2 = sprintf("%.4f (p=%.4f)", r$H2c_P2_Slope, r$H2c_P2_P),
+    Jurua_mean_dev = sprintf("%+.4f", r$Jurua_dev),
+    H1_abs_slope = sprintf("%+.4f (p=%.4f)", r$H1_Abs_Slope, r$H1_Abs_P),
+    H2a_path1 = sprintf("%+.4f (p=%.4f)", r$H2a_P1_Slope, r$H2a_P1_P),
+    H2a_path2_abs = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2a_P2_Abs_Slope, r$H2a_P2_Abs_P, r$H2a_FM_Abs_P),
+    H2b_path1 = sprintf("%+.4f (p=%.4f)", r$H2b_P1_Slope, r$H2b_P1_P),
+    H2b_path2_abs = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2b_P2_Abs_Slope, r$H2b_P2_Abs_P, r$H2b_FM_Abs_P),
+    H2c_path1 = sprintf("%+.4f (p=%.4f)", r$H2c_P1_Slope, r$H2c_P1_P),
+    H2c_path2_RMSE = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2c_P2_Abs_Slope, r$H2c_P2_Abs_P, r$H2c_FM_Abs_P),
     stringsAsFactors = FALSE
   )
 }))
 
-print(df_results)
-write.csv(df_results, "Outputs/SensitivityAnalysisResults.csv", row.names = FALSE)
+df_sig <- do.call(rbind, lapply(names(results), function(n) {
+  r <- results[[n]]
+  data.frame(
+    Model = n,
+    Jurua_mean_dev = sprintf("%+.4f", r$Jurua_dev),
+    H1_sig_slope = sprintf("%+.4f (p=%.4f)", r$H1_Sig_Slope, r$H1_Sig_P),
+    H2a_path1 = sprintf("%+.4f (p=%.4f)", r$H2a_P1_Slope, r$H2a_P1_P),
+    H2a_path2_sig = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2a_P2_Sig_Slope, r$H2a_P2_Sig_P, r$H2a_FM_Sig_P),
+    H2b_path1 = sprintf("%+.4f (p=%.4f)", r$H2b_P1_Slope, r$H2b_P1_P),
+    H2b_path2_sig = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2b_P2_Sig_Slope, r$H2b_P2_Sig_P, r$H2b_FM_Sig_P),
+    H2c_path1 = sprintf("%+.4f (p=%.4f)", r$H2c_P1_Slope, r$H2c_P1_P),
+    H2c_path2_sig = sprintf("%+.4f (p=%.4f; FM p=%.3f)", r$H2c_P2_Sig_Slope, r$H2c_P2_Sig_P, r$H2c_FM_Sig_P),
+    stringsAsFactors = FALSE
+  )
+}))
+
+cat("\n\n=========================================================\n")
+cat("SENSITIVITY ANALYSIS RESULTS (ABSOLUTE DEVIATION / RMSE)\n")
+cat("=========================================================\n\n")
+print(df_abs)
+
+cat("\n\n=========================================================\n")
+cat("SENSITIVITY ANALYSIS RESULTS (SIGNED DEVIATION)\n")
+cat("=========================================================\n\n")
+print(df_sig)
+
+write.csv(df_abs, "Outputs/SensitivityAnalysisResults_Absolute.csv", row.names = FALSE)
+write.csv(df_sig, "Outputs/SensitivityAnalysisResults_Signed.csv", row.names = FALSE)
+write.csv(df_sig, "Outputs/SensitivityAnalysisResults.csv", row.names = FALSE)

@@ -16,7 +16,7 @@ library(MASS)
 
 
 args <- commandArgs(trailingOnly = TRUE)
-suffix <- if (length(args) > 0) args[1] else "chave"
+suffix <- if (length(args) > 0) args[1] else "harte_wd"
 
 source("Code/Functions/revision_helpers.R")
 set.seed(1)
@@ -278,13 +278,19 @@ p2b<-ggplot(plot_data, aes(x = Region, y = dev, fill = Region, color=Region)) +
 )+
 xlab(" \n  \n ")
 
-# 1) Save main figure Figure_H1.png (using map, p2a, p2b - signed deviation)
-cowplot::plot_grid(map, p2a, p2b, labels = c('A', 'B', 'C'), rel_widths=c(0.5, 1, 0.5), ncol=3)
+# 1) Save main figure Figure_H1 (using map, pa, pb - absolute deviation, as in original submission)
+cowplot::plot_grid(map, pa, pb, labels = c('A', 'B', 'C'), rel_widths=c(0.5, 1, 0.5), ncol=3)
 ggsave(paste0("Figures/Figure_H1_", suffix, ".png"), height=4, width=6, bg="white", dpi=1000)
+if (suffix == "harte_wd") {
+  ggsave("Figures/Figure_H1.png", height=4, width=6, bg="white", dpi=1000)
+}
 
-# 2) Save supplementary figure Figure_H1_abssupplement.png (using pa, pb - absolute deviation)
-cowplot::plot_grid(pa, pb, labels = c('A', 'B'), rel_widths=c(1, 0.5))
-ggsave(paste0("Figures/Figure_H1_abssupplement_", suffix, ".png"), height=4, width=4.5)
+# 2) Save supplementary figure Figure_H1_signedsupplement (using p2a, p2b - signed deviation)
+cowplot::plot_grid(p2a, p2b, labels = c('A', 'B'), rel_widths=c(1, 0.5))
+ggsave(paste0("Figures/Figure_H1_signedsupplement_", suffix, ".png"), height=4, width=4.5, bg="white")
+if (suffix == "harte_wd") {
+  ggsave("Figures/Figure_H1_signedsupplement.png", height=4, width=4.5, bg="white")
+}
 
 # ---------------------------------------------------
 # Save Model Results
@@ -307,10 +313,16 @@ coef_abs_tab$CI_97.5 <- ci_abs[, 2]
 coef_abs_tab$Term <- rownames(coef_abs_tab)
 write.csv(coef_abs_tab, paste0("Outputs/H1_Model_Absolute_", suffix, ".csv"), row.names = FALSE)
 
-# 3. ANCOVA Interaction Test (Reviewer 2 request: test if slopes vary by region)
-fit_ancova <- lm(dev ~ disturbedcover * Region, data = plot_data)
-ancova_comp <- anova(fit_signed, fit_ancova) %>% as.data.frame()
-ancova_comp$Model <- c("Common Slope", "Varying Slopes (Interaction)")
-write.csv(ancova_comp, paste0("Outputs/H1_ANCOVA_InteractionTest_", suffix, ".csv"), row.names = FALSE)
+# 3. ANCOVA Interaction Tests (Reviewer 2 request: test if slopes vary by region)
+fit_ancova_abs <- lm(absdev ~ disturbedcover * Region, data = plot_data)
+ancova_comp_abs <- anova(fit, fit_ancova_abs) %>% as.data.frame()
+ancova_comp_abs$Model <- c("Common Slope (absdev)", "Varying Slopes (absdev)")
+write.csv(ancova_comp_abs, paste0("Outputs/H1_ANCOVA_InteractionTest_Absolute_", suffix, ".csv"), row.names = FALSE)
+
+fit_ancova_sig <- lm(dev ~ disturbedcover * Region, data = plot_data)
+ancova_comp_sig <- anova(fit_signed, fit_ancova_sig) %>% as.data.frame()
+ancova_comp_sig$Model <- c("Common Slope (dev)", "Varying Slopes (dev)")
+write.csv(ancova_comp_sig, paste0("Outputs/H1_ANCOVA_InteractionTest_Signed_", suffix, ".csv"), row.names = FALSE)
+write.csv(ancova_comp_abs, paste0("Outputs/H1_ANCOVA_InteractionTest_", suffix, ".csv"), row.names = FALSE)
 cat(paste0("H1 model results successfully saved to Outputs/ for suffix: ", suffix, "\n"))
 
