@@ -6,6 +6,9 @@
 
 library(tidyverse)
 
+args <- commandArgs(trailingOnly = TRUE)
+suffix <- if (length(args) > 0) args[1] else "chave"
+
 # 1) load data
 orderedPlotSubsets_l<-readRDS("Outputs/NonOverlappingOrderedPlotSubsets.RDS")
 
@@ -95,14 +98,14 @@ for (i in 1:nrow(df)) {
     df[i, "fcmedian"]<-read.csv("Data/env.csv") %>% as_tibble %>%
         filter(Region_Plot %in% orderedPlotSubsets_l[[i]]) %>%
         summarise(fcmedian=median(fc2000))
-    df[i, "devmedian"]<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble %>%
+    df[i, "devmedian"]<-read.csv(paste0("Outputs/EEOSPredsHarteWD_", suffix, ".csv")) %>% as_tibble %>%
         filter(Region_Plot %in% orderedPlotSubsets_l[[i]]) %>%
         summarise(devmedian=median(dev))
-    df[i, "RMSE"]<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble %>%
+    df[i, "RMSE"]<-read.csv(paste0("Outputs/EEOSPredsHarteWD_", suffix, ".csv")) %>% as_tibble %>%
         filter(Region_Plot %in% orderedPlotSubsets_l[[i]]) %>%
         mutate(error_sq=dev^2) %>%
         summarise(RMSE=sqrt(mean(error_sq)))
-    df[i, "R2"]<-read.csv("Outputs/EEOSPredsHarteWD.csv") %>% as_tibble %>%
+    df[i, "R2"]<-read.csv(paste0("Outputs/EEOSPredsHarteWD_", suffix, ".csv")) %>% as_tibble %>%
         filter(Region_Plot %in% orderedPlotSubsets_l[[i]]) %>%
         mutate(error=(B_pred-B)) %>%
         mutate(meanobs=mean(B)) %>%
@@ -130,6 +133,6 @@ df[is.na(df$fcmedian),]$fcmedian<-1
                 ggsci::scale_color_npg()
 
 
-write.csv(df, "Outputs/ForestCoverSubgroupSloanFits.csv")
+write.csv(df, paste0("Outputs/ForestCoverSubgroupSloanFits_", suffix, ".csv"), row.names = FALSE)
 
 

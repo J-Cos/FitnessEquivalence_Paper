@@ -15,9 +15,12 @@ library(MASS)
 
 
 
+args <- commandArgs(trailingOnly = TRUE)
+suffix <- if (length(args) > 0) args[1] else "chave"
+
 source("Code/Functions/revision_helpers.R")
 set.seed(1)
-plot_data <- load_and_prepare_plot_data()
+plot_data <- load_and_prepare_plot_data(suffix = suffix)
 
 
 
@@ -247,71 +250,30 @@ map <- ggplot() +
   guides(size="none", alpha="none", color="none")
 
 
-
-
-
-cowplot::plot_grid(map, pa, pb, labels = c('A', 'B', 'C'), rel_widths=c(0.5,1, 0.5), ncol=3)
-
-ggsave("Figures/Figure_H1.png", height=4, width=6, bg="white", dpi=1000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# make supplementary signed deviation plot
-
+# Define supplementary signed deviation plots first
 coef_signed_df<-getCoefDataframe(fit_signed)
-
 marg_signed <- get_marginal_predictions(plot_data, outcome = "dev", predictor = "disturbedcover")
 
-p2a<-ggplot(plot_data, aes(x = disturbedcover, y = dev, color = Region)) +
+p2a <- ggplot(plot_data, aes(x = disturbedcover, y = dev, color = Region)) +
   geom_ribbon(data = marg_signed, aes(x = x, ymin = lwr, ymax = upr), fill = "black", alpha = 0.15, inherit.aes = FALSE) +
   geom_line(data = marg_signed, aes(x = x, y = y), color = "black", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE) +
-  geom_point(alpha = 0.8, size=0.5) +
+  geom_point(alpha = 0.8, size = 0.5) +
   geom_abline(data = coef_signed_df,
               aes(intercept = intercept, slope = slope, color = region),
               linewidth = 0.5) +
-  theme_classic()+
-  geom_hline(yintercept=0, linetype=2)+
+  theme_classic() +
+  geom_hline(yintercept = 0, linetype = "dotted") +
   scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  #scale_y_continuous(expand = expansion(mult = c(0, 0.1)))+
-  xlab("Disturbed forest cover\n(2000m radius)")+
-  ylab("EEOS deviation")+
-  ggsci::scale_color_npg()+
-  guides(color="none")
-
-
+  xlab("Disturbed forest cover\n(2000m radius)") +
+  ylab("EEOS deviation") +
+  ggsci::scale_color_npg() +
+  guides(color = "none")
 
 p2b<-ggplot(plot_data, aes(x = Region, y = dev, fill = Region, color=Region)) +
-  geom_hline(yintercept=0, linetype=2)+
+  geom_hline(yintercept=0, linetype="dotted")+
   geom_violin() +
   theme_classic()+
-  #geom_hline(yintercept=0, linetype=2)+
   ggsci::scale_fill_npg()+ ggsci::scale_color_npg()+
-  #scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
   theme(
   axis.title.y = element_blank(),
   axis.text.x = element_blank(),
@@ -322,7 +284,39 @@ p2b<-ggplot(plot_data, aes(x = Region, y = dev, fill = Region, color=Region)) +
 )+
 xlab(" \n  \n ")
 
+# 1) Save main figure Figure_H1.png (using map, p2a, p2b - signed deviation)
+cowplot::plot_grid(map, p2a, p2b, labels = c('A', 'B', 'C'), rel_widths=c(0.5, 1, 0.5), ncol=3)
+ggsave(paste0("Figures/Figure_H1_", suffix, ".png"), height=4, width=6, bg="white", dpi=1000)
 
-cowplot::plot_grid(p2a, p2b, labels = c('A', 'B'), rel_widths=c(1, 0.5))
+# 2) Save supplementary figure Figure_H1_abssupplement.png (using pa, pb - absolute deviation)
+cowplot::plot_grid(pa, pb, labels = c('A', 'B'), rel_widths=c(1, 0.5))
+ggsave(paste0("Figures/Figure_H1_abssupplement_", suffix, ".png"), height=4, width=4.5)
 
-ggsave("Figures/Figure_H1_signedsupplement.png", height=4, width=4.5)
+# ---------------------------------------------------
+# Save Model Results
+# ---------------------------------------------------
+dir.create("Outputs", showWarnings = FALSE)
+
+# 1. Signed deviation model summary & CIs
+coef_signed_tab <- summary(fit_signed)$coefficients %>% as.data.frame()
+ci_signed <- confint(fit_signed)
+coef_signed_tab$CI_2.5 <- ci_signed[, 1]
+coef_signed_tab$CI_97.5 <- ci_signed[, 2]
+coef_signed_tab$Term <- rownames(coef_signed_tab)
+write.csv(coef_signed_tab, paste0("Outputs/H1_Model_Signed_", suffix, ".csv"), row.names = FALSE)
+
+# 2. Absolute deviation model summary & CIs
+coef_abs_tab <- summary(fit)$coefficients %>% as.data.frame()
+ci_abs <- confint(fit)
+coef_abs_tab$CI_2.5 <- ci_abs[, 1]
+coef_abs_tab$CI_97.5 <- ci_abs[, 2]
+coef_abs_tab$Term <- rownames(coef_abs_tab)
+write.csv(coef_abs_tab, paste0("Outputs/H1_Model_Absolute_", suffix, ".csv"), row.names = FALSE)
+
+# 3. ANCOVA Interaction Test (Reviewer 2 request: test if slopes vary by region)
+fit_ancova <- lm(dev ~ disturbedcover * Region, data = plot_data)
+ancova_comp <- anova(fit_signed, fit_ancova) %>% as.data.frame()
+ancova_comp$Model <- c("Common Slope", "Varying Slopes (Interaction)")
+write.csv(ancova_comp, paste0("Outputs/H1_ANCOVA_InteractionTest_", suffix, ".csv"), row.names = FALSE)
+cat(paste0("H1 model results successfully saved to Outputs/ for suffix: ", suffix, "\n"))
+

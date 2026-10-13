@@ -11,11 +11,15 @@ library(lavaan)
 #' Load and prepare plot-level data
 #' Sets Juruá forest cover to 1.0 (0% disturbed) with no simulated noise.
 #' Dummy codes regions with Juruá as reference.
-load_and_prepare_plot_data <- function(preds_file = "Outputs/EEOSPredsHarteWD.csv",
+load_and_prepare_plot_data <- function(suffix = "chave",
+                                      preds_file = NULL,
                                       env_file = "Data/env.csv",
                                       cats_file = "Outputs/CatsOutput.csv",
                                       non_neutral_file = "Outputs/NonNeutralProportions.csv") {
   
+  if (is.null(preds_file)) {
+    preds_file <- paste0("Outputs/EEOSPredsHarteWD_", suffix, ".csv")
+  }
   if (!file.exists(preds_file)) stop(paste("File not found:", preds_file))
   if (!file.exists(env_file)) stop(paste("File not found:", env_file))
   
@@ -51,7 +55,10 @@ load_and_prepare_plot_data <- function(preds_file = "Outputs/EEOSPredsHarteWD.cs
 }
 
 #' Load and prepare subgroup-level data (for H2c)
-load_and_prepare_subgroup_data <- function(subgroup_file = "Outputs/ForestCoverSubgroupSloanFits.csv") {
+load_and_prepare_subgroup_data <- function(suffix = "chave", subgroup_file = NULL) {
+  if (is.null(subgroup_file)) {
+    subgroup_file <- paste0("Outputs/ForestCoverSubgroupSloanFits_", suffix, ".csv")
+  }
   if (!file.exists(subgroup_file)) stop(paste("File not found:", subgroup_file))
   
   df <- read.csv(subgroup_file) %>% as_tibble()
@@ -153,6 +160,7 @@ print_sem_comparison <- function(fit_full, fit_partial, fit_direct, fit_nocov = 
   
   print(as.data.frame(comp_df), row.names = FALSE)
   cat("\n")
+  return(comp_df)
 }
 
 #' Calculate marginal prediction line and 95% CI ribbon (Option B)
