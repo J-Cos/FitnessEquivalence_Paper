@@ -18,6 +18,13 @@ print(res$lrt)
 print(cor.test(plot_data$absdev, plot_data$CATS_pois))
 write_mediation_outputs(res, "H2a", suffix)
 
+# Sensitivity: 3-trait CATS (Hmax is missing for Jurua-only taxa, so the 4-trait model drops
+# ~44% of Jurua stems) and a diagnostic stem-abundance metacommunity offset
+for (variant in c("3trait", "metaAbund")) {
+  res_v <- fit_mediation_suite(plot_data, x = "disturbedcover", m = paste0("CATS_pois_", variant), y = "absdev")
+  write_mediation_outputs(res_v, paste0("H2a_", variant), suffix)
+}
+
 expand_01 <- expansion(mult = c(0, 0.1))
 fig <- plot_mediation_panels(
   plot_data, "disturbedcover", "CATS_pois", "absdev", color_var = "Region",

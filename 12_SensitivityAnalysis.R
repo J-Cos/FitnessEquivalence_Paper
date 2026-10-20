@@ -33,8 +33,9 @@ run_option <- function(suffix) {
   sem <- bind_rows(
     mediation_paths(d, "CATS_pois", "dev"), mediation_paths(d, "CATS_pois", "absdev"),
     mediation_paths(d, "proportionNonNeutral", "dev"), mediation_paths(d, "proportionNonNeutral", "absdev"),
-    mediation_paths(g, "r2pois", "devmedian"), mediation_paths(g, "r2pois", "RMSE")
-  ) |> mutate(hypothesis = rep(c("H2a", "H2b", "H2c"), each = 2), .before = 1)
+    mediation_paths(g, "r2pois", "devmedian"), mediation_paths(g, "r2pois", "RMSE"),
+    mediation_paths(d, "CATS_pois_3trait", "dev"), mediation_paths(d, "CATS_pois_3trait", "absdev")
+  ) |> mutate(hypothesis = rep(c("H2a", "H2b", "H2c", "H2a_3trait"), each = 2), .before = 1)
   list(suffix = suffix,
        jurua_dev = mean(d$dev[d$Region == "Jurua"]),
        jurua_absdev = mean(d$absdev[d$Region == "Jurua"]),
