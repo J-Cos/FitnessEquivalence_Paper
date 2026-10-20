@@ -1,3 +1,15 @@
+# Whitelist-only: ignore everything, then re-include scripts, docs and lockfiles
+*
+!*/
+!*.R
+!*.r
+!*.py
+!README.md
+!.gitignore
+!renv.lock
+!environment.yml
+
+# Never track caches
 __pycache__/
-*.pyc
-.DS_Store
+.Rproj.user/
+.pytest_cache/
