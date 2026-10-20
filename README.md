@@ -29,7 +29,7 @@ Only scripts, this README and the environment lockfiles are tracked (see `.gitig
 ## Requirements
 
 - **R** 4.3.3. Restore the recorded package versions with `renv::restore(lockfile = "Code/renv.lock")`.
-  Main packages: tidyverse, lavaan, cowplot, ggsci, boot, lmtest, sandwich, MASS, minpack.lm, Hmisc,
+  Main packages: tidyverse, lavaan, cowplot, ggsci, boot, lmtest, sandwich, MASS, robustbase, quantreg, minpack.lm, Hmisc,
   bbmle, terra, sf, rnaturalearth, tidyterra, testthat.
 - **Python** 3.12 with numpy 1.26.4, scipy 1.14.1, pandas 2.2.2. Create it with
   `conda env create -f Code/environment.yml`.
@@ -65,15 +65,15 @@ Python versions are written to `Outputs/logs/`.
 | 02 | `02_GetEcosystemMacrostates.R` | `Macrostates_<scaling>.csv` (6 scalings) | Methods |
 | 02b | `02b_MakeMacrostateScatterplots.R` | `FigureS1.png` | Fig. S1 |
 | 03 | `03_FitEEOS.py` | `EEOSPreds_<scaling>.csv` (B_pred, dev, METE constraint errors) | Methods |
-| 04 | `04_FitSimpleEeosDevRegression.R` | `H1_Model_*`, `H1_ANCOVA_*`, `H1_Robustness_*`, `H1_BootstrapCI_*`; `Figure_H1.png`, `Figure_H1_signedsupplement.png` | H1; Fig. 1, Fig. S2 |
+| 04 | `04_FitSimpleEeosDevRegression.R` | `H1_Model_*`, `H1_ANCOVA_*`, `H1_Robustness_*`, `H1_BootstrapCI_*`, `H1_InfluentialPlots_*`; `Figure_H1.png`, `Figure_H1_signedsupplement.png` | H1; Fig. 1, Fig. S2 |
 | 05 | `05_FitCatsRegressions.R` | `CatsOutput.csv` | H2a metric |
-| 06 | `06_SEMs_CatsRegressions.R` | `H2a_*` (+ `_3trait`, `_metaAbund` sensitivity); `Figure_H2a.png` | H2a; Fig. 2 |
+| 06 | `06_SEMs_CatsRegressions.R` | `H2a_*` (absolute) and `H2a_Signed_*` (signed), incl. `_IndirectEffect`; `H2a_3trait*` sensitivity; `Figure_H2a.png` | H2a; Fig. 2 |
 | 07 | `07_GetPlotSubsets.R` | plot subsets (RDS) | Methods |
 | 08 | `08_FitOverallSloanAndExtractNonneutralAbundances.R` | `SloanOutput.RDS`, `SloanR2_ByRegion.csv`, `NonNeutralTaxa*.csv`, `NonNeutralProportions.csv`; `Figure_ExampleSLoanFits.png`, `Figure_SloanAvgFit.png` | H2b metric; Table S1; Figs. S3–S4 |
 | 08b | `08b_TestNonNeutralTraitDifferences.R` | `NonNeutralTraitTests.csv`; `Figure_traitsOfNonneutrals.png` | Fig. S5 |
-| 09 | `09_SEMs_NonNeutralAbundances.R` | `H2b_*`; `Figure_H2b.png` | H2b; Fig. 3 |
+| 09 | `09_SEMs_NonNeutralAbundances.R` | `H2b_*`, `H2b_Signed_*` (incl. `_IndirectEffect`); `Figure_H2b.png` | H2b; Fig. 3 |
 | 10 | `10_FitForestCoverSubgroupSloans.R` | `ForestCoverSubgroupSloanFits.csv`; `Figure_sloansubsets_supplement.png` | H2c metric; Fig. S6 |
-| 11 | `11_SEMs_ForestCoverSubgroupSloans.R` | `H2c_*`; `Figure_H2c.png` | H2c; Fig. 4 |
+| 11 | `11_SEMs_ForestCoverSubgroupSloans.R` | `H2c_*` (RMSE), `H2c_Signed_*` (median signed dev), incl. `_IndirectEffect`; `Figure_H2c.png` | H2c; Fig. 4 |
 | 12 | `12_SensitivityAnalysis.R` | `SensitivityAnalysisResults_{Absolute,Signed,long}.csv` | Table S2 |
 | 13 | `13_WoodDensityDecomposition.R` | `WoodDensityDecomposition.csv` | SI Note S3 |
 | 14 | `14_NS_TruncationCounterfactual.py` | `TableS3_NS_Counterfactual*.csv` | Table S3 |

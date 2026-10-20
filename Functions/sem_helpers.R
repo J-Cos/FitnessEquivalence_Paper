@@ -95,3 +95,24 @@ write_mediation_outputs <- function(res, id, suffix) {
   utils::write.csv(res$estimates, out_path(paste0(id, "_Parameter_Estimates"), suffix), row.names = FALSE)
   utils::write.csv(as.data.frame(res$lrt), out_path(paste0(id, "_LRT"), suffix), row.names = FALSE)
 }
+
+#' Run one mediation hypothesis on both co-primary outcomes and write all outputs.
+#' Absolute deviation -> files "<id>_*"; signed deviation -> files "<id>_Signed_*".
+#' @param indirect also estimate the bootstrapped indirect effect (2,000 draws)
+#' @return list of the two suites (absolute, signed), invisibly
+run_mediation_hypothesis <- function(data, id, m, y_abs, y_signed, suffix, x = "disturbedcover",
+                                     indirect = TRUE) {
+  specs <- list(absolute = list(tag = id, y = y_abs),
+                signed = list(tag = paste0(id, "_Signed"), y = y_signed))
+  out <- lapply(specs, function(spec) {
+    res <- fit_mediation_suite(data, x, m, spec$y)
+    cat(spec$tag, ": full-mediation LRT\n"); print(res$lrt)
+    write_mediation_outputs(res, spec$tag, suffix)
+    if (indirect) {
+      utils::write.csv(fit_indirect_effect(data, x, m, spec$y),
+                       out_path(paste0(spec$tag, "_IndirectEffect"), suffix), row.names = FALSE)
+    }
+    res
+  })
+  invisible(out)
+}

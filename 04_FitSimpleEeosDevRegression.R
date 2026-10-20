@@ -1,5 +1,5 @@
 # --------------------------------------------
-# Purpose: H1 - linear regressions of EEoS deviation (absolute and signed) on forest loss with
+# Purpose: H1 - linear regressions of EEoS deviation (absolute and signed; co-primary) on forest loss with
 #          regional fixed effects, robustness checks, ANCOVA slope-homogeneity test, Figure 1 and S2.
 # Input Origin Scripts: 03_FitEEOS.py
 # Output: Outputs/H1_*_<suffix>.csv; Figures/Figure_H1*.png; Figures/diagnostics/
@@ -26,9 +26,17 @@ fit_h1 <- function(d, outcome) {
 
   ancova <- as.data.frame(anova(fit, lm(reformulate("disturbedcover * Region", outcome), data = d)))
 
-  # Robustness: HC3 sandwich SEs, Huber M-estimation, exclusion of influential plots (Cook's D > 4/n)
+  # Robustness: HC3 sandwich SEs; Huber and MM robust regression; median (quantile) regression;
+  # Gamma GLM with log link (absolute deviation only: positive, right-skewed); and exclusion of
+  # influential plots (Cook's D > 4/n; reported as sensitivity only - these are valid plots)
   hc3 <- coeftest(fit, vcov = vcovHC(fit, type = "HC3"))
   rlm_fit <- MASS::rlm(form, data = d, maxit = 100)
+  mm_fit <- robustbase::lmrob(form, data = d, setting = "KS2014")
+  set.seed(1)
+  rq_sum <- suppressWarnings(summary(quantreg::rq(form, tau = 0.5, data = d), se = "boot", R = 2000))
+  gamma_coef <- if (all(d[[outcome]] > 0)) {
+    summary(glm(form, family = Gamma(link = "log"), data = d))$coefficients
+  } else NULL
   influential <- d$Region_Plot[cooks.distance(fit) > 4 / nobs(fit)]
   fit_noinf <- lm(form, data = filter(d, !Region_Plot %in% influential))
   bp <- bptest(fit)
@@ -36,10 +44,17 @@ fit_h1 <- function(d, outcome) {
     Term = rownames(coef_tab), Estimate = coef(fit),
     HC3_SE = hc3[, "Std. Error"], HC3_p = hc3[, "Pr(>|t|)"],
     RLM_Estimate = coef(rlm_fit),
+    MM_Estimate = coef(mm_fit), MM_p = summary(mm_fit)$coefficients[, 4],
+    Median_Estimate = rq_sum$coefficients[, 1], Median_p = rq_sum$coefficients[, 4],
+    GammaLog_Estimate = if (is.null(gamma_coef)) NA_real_ else gamma_coef[, 1],
+    GammaLog_p = if (is.null(gamma_coef)) NA_real_ else gamma_coef[, 4],
     NoInfluential_Estimate = coef(fit_noinf), NoInfluential_p = summary(fit_noinf)$coefficients[, 4],
     n_influential_excluded = length(influential),
     BP_statistic = unname(bp$statistic), BP_p = bp$p.value
   )
+  write.csv(tibble(Region_Plot = influential, cooks_distance = cooks.distance(fit)[cooks.distance(fit) > 4 / nobs(fit)]),
+            out_path(paste0("H1_InfluentialPlots_", ifelse(outcome == "absdev", "Absolute", "Signed")), suffix),
+            row.names = FALSE)
 
   png(sprintf("Figures/diagnostics/H1_%s_%s_QQ.png", outcome, suffix), width = 900, height = 450)
   par(mfrow = c(1, 2)); plot(fit, which = c(2, 4)); dev.off()

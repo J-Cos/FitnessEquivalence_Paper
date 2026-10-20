@@ -1,8 +1,9 @@
 # --------------------------------------------
 # Purpose: H2a - SEMs testing whether CATS trait selection (fitness non-equivalence) mediates the
-#          effect of forest loss on absolute EEoS deviation. Figure 2.
+#          effect of forest loss on EEoS deviation (absolute and signed; co-primary). Figure 2.
 # Input Origin Scripts: 03_FitEEOS.py; 05_FitCatsRegressions.R
-# Output: Outputs/H2a_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv; Figures/Figure_H2a*.png
+# Output: Outputs/H2a[_Signed][_3trait]_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv;
+#         Figures/Figure_H2a*.png
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
@@ -13,20 +14,13 @@ suffix <- get_suffix_arg()
 set.seed(1)
 plot_data <- load_and_prepare_plot_data(suffix, need = "cats")
 
-res <- fit_mediation_suite(plot_data, x = "disturbedcover", m = "CATS_pois", y = "absdev")
-print(res$lrt)
+run_mediation_hypothesis(plot_data, "H2a", m = "CATS_pois", y_abs = "absdev", y_signed = "dev", suffix = suffix)
 print(cor.test(plot_data$absdev, plot_data$CATS_pois))
-write_mediation_outputs(res, "H2a", suffix)
-# Indirect effect a*b of forest loss via the mediator, percentile bootstrap CI (2,000 draws)
-write.csv(fit_indirect_effect(plot_data, "disturbedcover", "CATS_pois", "absdev"),
-          out_path("H2a_IndirectEffect", suffix), row.names = FALSE)
 
-# Sensitivity: 3-trait CATS (Hmax is missing for Jurua-only taxa, so the 4-trait model drops
-# ~44% of Jurua stems) and a diagnostic stem-abundance metacommunity offset
-for (variant in c("3trait", "metaAbund")) {
-  res_v <- fit_mediation_suite(plot_data, x = "disturbedcover", m = paste0("CATS_pois_", variant), y = "absdev")
-  write_mediation_outputs(res_v, paste0("H2a_", variant), suffix)
-}
+# Sensitivity: 3-trait CATS (Hmax is missing for Jurua-only taxa, so the 4-trait model drops ~44% of
+# Jurua stems)
+run_mediation_hypothesis(plot_data, "H2a_3trait", m = "CATS_pois_3trait", y_abs = "absdev", y_signed = "dev",
+                         suffix = suffix, indirect = FALSE)
 
 expand_01 <- expansion(mult = c(0, 0.1))
 fig <- plot_mediation_panels(

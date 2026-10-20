@@ -1,8 +1,10 @@
 # --------------------------------------------
 # Purpose: H2c - SEMs testing whether neutral (Poisson random-sampling) model fit mediates the
-#          effect of median forest loss on EEoS RMSE across 43 forest-cover subgroups. Figure 4.
+#          effect of median forest loss on EEoS deviation across 43 forest-cover subgroups
+#          (RMSE and median signed deviation; co-primary). Figure 4.
 # Input Origin Scripts: 03_FitEEOS.py; 10_FitForestCoverSubgroupSloans.R
-# Output: Outputs/H2c_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv; Figures/Figure_H2c*.png
+# Output: Outputs/H2c[_Signed]_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv;
+#         Figures/Figure_H2c*.png
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
@@ -13,12 +15,7 @@ suffix <- get_suffix_arg()
 set.seed(1)
 subgroups <- load_and_prepare_subgroup_data(suffix)
 
-res <- fit_mediation_suite(subgroups, x = "disturbedcover", m = "r2pois", y = "RMSE")
-print(res$lrt)
-write_mediation_outputs(res, "H2c", suffix)
-# Indirect effect a*b of forest loss via the mediator, percentile bootstrap CI (2,000 draws)
-write.csv(fit_indirect_effect(subgroups, "disturbedcover", "r2pois", "RMSE"),
-          out_path("H2c_IndirectEffect", suffix), row.names = FALSE)
+run_mediation_hypothesis(subgroups, "H2c", m = "r2pois", y_abs = "RMSE", y_signed = "devmedian", suffix = suffix)
 
 fig <- plot_mediation_panels(
   subgroups, "disturbedcover", "r2pois", "RMSE", color_var = "region", color_name = "Region",
