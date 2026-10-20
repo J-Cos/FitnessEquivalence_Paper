@@ -17,7 +17,7 @@ fits <- map(subsets, \(ids) sncm_fit(build_community_matrix(comm, ids)))
 
 fit_table <- imap_dfr(fits, \(f, name) mutate(extract_sloan_summary(f), subgroup = name,
                                               region = substr(name, 1, 3), .before = 1))
-print(summary(select(fit_table, dAIC_v_binom, dAIC_v_pois)))
+print(summary(select(fit_table, dAIC_v_binom, dAIC_v_pois, dAIC_pois_v_binom)))
 write.csv(fit_table, out_path("ForestCoverSubgroupSloanFits"), row.names = FALSE)
 
 # Figure S6: all subgroup fits with Poisson random-sampling 95% intervals

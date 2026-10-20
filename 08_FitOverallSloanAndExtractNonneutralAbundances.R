@@ -30,9 +30,9 @@ fit_replicate <- function(i) {
 replicates <- map(seq_len(N_SUBSAMPLES), fit_replicate)
 
 sloan_stats <- map_dfr(replicates, "stats") |>
-  select(seed, region, r2, m, r2binom, r2pois, dAIC_v_binom, dAIC_v_pois)
+  select(seed, region, r2, m, r2binom, r2pois, dAIC_v_binom, dAIC_v_pois, dAIC_pois_v_binom)
 saveRDS(as.data.frame(sloan_stats), out_path("SloanOutput", ext = "RDS"))
-print(summary(select(sloan_stats, dAIC_v_binom, dAIC_v_pois)))
+print(summary(select(sloan_stats, dAIC_v_binom, dAIC_v_pois, dAIC_pois_v_binom)))
 
 # 2) Figures: example fits (last replicate; Figure S3) and R2 distribution by region (Figure S4) ---
 last_fits <- replicates[[N_SUBSAMPLES]]$fits

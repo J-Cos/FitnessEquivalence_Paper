@@ -44,8 +44,20 @@ fit_h1 <- function(d, outcome) {
   png(sprintf("Figures/diagnostics/H1_%s_%s_QQ.png", outcome, suffix), width = 900, height = 450)
   par(mfrow = c(1, 2)); plot(fit, which = c(2, 4)); dev.off()
 
-  list(fit = fit, coef_tab = coef_tab, ancova = ancova, robust = robust, influential = influential)
+  # Case-resampling bootstrap CIs (BCa and percentile) for every coefficient
+  set.seed(1)
+  b <- boot::boot(d, function(data, i) coef(lm(form, data = data[i, ])), R = N_BOOT)
+  boot_tab <- map_dfr(seq_along(coef(fit)), function(k) {
+    ci <- boot::boot.ci(b, type = c("bca", "perc"), index = k)
+    tibble(Term = names(coef(fit))[k], Estimate = unname(coef(fit)[k]),
+           BCa_lwr = ci$bca[4], BCa_upr = ci$bca[5], Perc_lwr = ci$percent[4], Perc_upr = ci$percent[5],
+           R = N_BOOT)
+  })
+
+  list(fit = fit, coef_tab = coef_tab, ancova = ancova, robust = robust, influential = influential,
+       boot = boot_tab)
 }
+N_BOOT <- 10000
 
 h1_abs <- fit_h1(plot_data, "absdev")
 h1_sig <- fit_h1(plot_data, "dev")
@@ -60,6 +72,8 @@ write.csv(mutate(h1_sig$ancova, Model = c("Common Slope (dev)", "Varying Slopes 
           out_path("H1_ANCOVA_InteractionTest_Signed", suffix), row.names = FALSE)
 write.csv(h1_abs$robust, out_path("H1_Robustness_Absolute", suffix), row.names = FALSE)
 write.csv(h1_sig$robust, out_path("H1_Robustness_Signed", suffix), row.names = FALSE)
+write.csv(h1_abs$boot, out_path("H1_BootstrapCI_Absolute", suffix), row.names = FALSE)
+write.csv(h1_sig$boot, out_path("H1_BootstrapCI_Signed", suffix), row.names = FALSE)
 
 # Figures ---------------------------------------------------------------------------------------
 deviation_scatter <- function(y, ylab, hline = FALSE, y_expand = TRUE) {

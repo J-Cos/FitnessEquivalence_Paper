@@ -66,8 +66,7 @@ sncm_fit <- function(spp, pool = NULL, taxon = NULL) {
 
   # Binomial random-sampling model
   bino.LL <- function(mu, sigma) {
-    R =
-     - pbinom(d, floor(N), p, lower.tail = FALSE)
+    R <- freq - pbinom(d, floor(N), p, lower.tail = FALSE)
     R <- dnorm(R, mu, sigma)
     -sum(log(R))
   }
@@ -137,6 +136,7 @@ extract_sloan_summary <- function(fit) {
   s <- fit$stats
   tibble::tibble(r2 = s$Rsqr, r2binom = s$Rsqr.bino, r2pois = s$Rsqr.pois,
                  dAIC_v_binom = s$AIC - s$AIC.bino, dAIC_v_pois = s$AIC - s$AIC.pois,
+                 dAIC_pois_v_binom = s$AIC.pois - s$AIC.bino,
                  m = s$m)
 }
 
