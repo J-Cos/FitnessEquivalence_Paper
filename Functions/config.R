@@ -14,7 +14,7 @@ SCALING_LABELS   <- c(harte_nowd = "Option 1: Linear, No WD",
                       quad_nowd  = "Option 3: Quadratic, No WD",
                       quad_wd    = "Option 4: Quadratic, With WD (Metab-First)",
                       mte_wd     = "Option 5: Biomass-First Power Law (MTE)",
-                      chave      = "Option 6: Volume-Corrected Chave Hybrid")
+                      chave      = "Option 6: Chave et al. (2014) Allometry, With WD")
 
 # Jurua plots are absent from Data/env.csv; centroid used only for the regional map (Figure 1A)
 JURUA_CENTROID <- list(lon = -67.71, lat = -5.56, n = 30)

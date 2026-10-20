@@ -21,11 +21,10 @@ SCALINGS <- list(
   quad_wd    = function(d) dplyr::mutate(d, e = (DBH / min(DBH))^2, m = e^(4/3) * center_wd(WD)),
   mte_wd     = function(d) dplyr::mutate(d, m = (DBH / min(DBH))^(8/3) * center_wd(WD), e = m^(3/4)),
   chave      = function(d) {
-    # LEGACY (to be corrected in Phase 3.5): applied to rescaled D rather than DBH in cm
-    D <- d$DBH / min(d$DBH)
+    m_ref <- chave_mass(min(d$DBH), 1)                      # smallest stem at mean (centred) WD
     dplyr::mutate(d,
-                  m = center_wd(WD) * D^2.67 * exp(-0.0299 * log(D)^2),
-                  e = D^2 * exp(-0.0224 * log(D)^2))
+                  m = chave_mass(DBH, center_wd(WD)) / m_ref,
+                  e = (chave_mass(DBH, 1) / m_ref)^(3/4))    # WD-free mass^(3/4), so min(e) = 1
   }
 )
 
