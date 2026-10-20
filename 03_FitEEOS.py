@@ -34,7 +34,10 @@ def main(suffixes):
     for suffix in suffixes:
         if suffix not in ALL_SUFFIXES:
             raise ValueError(f"Unknown suffix {suffix!r}; expected one of {ALL_SUFFIXES}")
-        preds = fit_eeos(pd.read_csv(f"Outputs/Macrostates_{suffix}.csv"))
+        macro = pd.read_csv(f"Outputs/Macrostates_{suffix}.csv")
+        if not (macro["E"] > macro["N"]).all():  # METE needs E > N (lambda_2 = S/(E-N) > 0)
+            raise ValueError(f"{suffix}: some plots have E <= N, outside METE's domain")
+        preds = fit_eeos(macro)
         preds.to_csv(f"Outputs/EEOSPreds_{suffix}.csv", index=False)
         worst = np.abs(preds[["con_N", "con_E"]]).to_numpy().max()
         print(f"EEoS fitted for {suffix}: {len(preds)} plots, max |constraint error| = {worst:.2e}")

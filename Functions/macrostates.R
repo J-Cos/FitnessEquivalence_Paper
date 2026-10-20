@@ -19,7 +19,12 @@ SCALINGS <- list(
   harte_wd   = function(d) dplyr::mutate(d, e = DBH / min(DBH), m = e^(4/3) * center_wd(WD)),
   quad_nowd  = function(d) dplyr::mutate(d, e = (DBH / min(DBH))^2, m = e^(4/3)),
   quad_wd    = function(d) dplyr::mutate(d, e = (DBH / min(DBH))^2, m = e^(4/3) * center_wd(WD)),
-  mte_wd     = function(d) dplyr::mutate(d, m = (DBH / min(DBH))^(8/3) * center_wd(WD), e = m^(3/4)),
+  mte_wd     = function(d) {
+    # biomass first: m ~ D^(8/3) * WD, e = m^(3/4); rescaled so min(e) = 1 (METE requires e >= 1),
+    # keeping m = e^(4/3)
+    e_raw <- ((d$DBH / min(d$DBH))^(8/3) * center_wd(d$WD))^(3/4)
+    dplyr::mutate(d, e = e_raw / min(e_raw), m = e^(4/3))
+  },
   chave      = function(d) {
     m_ref <- chave_mass(min(d$DBH), 1)                      # smallest stem at mean (centred) WD
     dplyr::mutate(d,
@@ -34,8 +39,11 @@ compute_organism_stats <- function(comm, traits, suffix) {
   d <- dplyr::left_join(comm, dplyr::select(traits, Binomial_correct, WD),
                         by = "Binomial_correct", relationship = "many-to-one")
   stopifnot(nrow(d) == nrow(comm))
-  SCALINGS[[suffix]](d) |>
+  out <- SCALINGS[[suffix]](d) |>
     dplyr::select(Region, Region_Plot, Binomial_correct, m, e, WD)
+  # METE integrates individual metabolic rates over [1, E]: the smallest stem must have e = 1
+  if (abs(min(out$e) - 1) > 1e-9) stop("Scaling '", suffix, "' violates METE's bound: min(e) = ", min(out$e))
+  out
 }
 
 #' Plot-level macrostates

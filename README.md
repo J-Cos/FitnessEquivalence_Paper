@@ -86,7 +86,7 @@ Python versions are written to `Outputs/logs/`.
 | `harte_wd` | **main analysis**: as `harte_nowd`, with m multiplied by centred wood density |
 | `quad_nowd` | ε = (DBH/DBH_min)², m = ε^(4/3) |
 | `quad_wd` | as `quad_nowd`, with m multiplied by centred wood density |
-| `mte_wd` | m = (DBH/DBH_min)^(8/3) × centred wood density, ε = m^(3/4) |
+| `mte_wd` | ε ∝ ((DBH/DBH_min)^(8/3) × centred wood density)^(3/4), rescaled so the smallest ε = 1; m = ε^(4/3) |
 | `chave` | Chave et al. (2014) allometry with DBH in cm, rescaled so the smallest stem has m = ε = 1 |
 
 ## Code organisation

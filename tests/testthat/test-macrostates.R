@@ -1,18 +1,24 @@
-test_that("all scalings except biomass-first give min(e) = 1; all give positive masses", {
+test_that("every scaling respects METE's bound (min(e) = 1) and gives positive masses", {
   for (s in SCALING_SUFFIXES) {
     org <- compute_organism_stats(toy_comm, toy_traits, s)
-    if (s != "mte_wd") expect_equal(min(org$e), 1, tolerance = 1e-12, info = s)
+    expect_equal(min(org$e), 1, tolerance = 1e-12, info = s)
     expect_true(all(org$m > 0), info = s)
     expect_equal(nrow(org), nrow(toy_comm), info = s)
   }
 })
 
-test_that("biomass-first option (mte_wd) has e = (D^(8/3) * centred WD)^(3/4), so e < 1 for low-WD small stems", {
-  # Known property of Option 5 as defined in the submission: METE assumes e >= 1.
+test_that("biomass-first option (mte_wd): e proportional to (D^(8/3) * centred WD)^(3/4), rescaled to min 1, m = e^(4/3)", {
   wd_c <- center_wd(left_join(toy_comm, toy_traits, by = "Binomial_correct")$WD)
   org <- compute_organism_stats(toy_comm, toy_traits, "mte_wd")
-  expect_equal(org$e, ((toy_comm$DBH / 10)^(8/3) * wd_c)^(3/4))
-  expect_lt(min(org$e), 1)
+  raw <- ((toy_comm$DBH / 10)^(8/3) * wd_c)^(3/4)
+  expect_equal(org$e, raw / min(raw))
+  expect_equal(org$m, org$e^(4/3))
+})
+
+test_that("a scaling that breaks METE's lower bound is rejected", {
+  bad <- SCALINGS; SCALINGS$bad <<- function(d) dplyr::mutate(d, e = DBH / max(DBH), m = e)
+  on.exit(SCALINGS <<- bad)
+  expect_error(compute_organism_stats(toy_comm, toy_traits, "bad"), "violates METE's bound")
 })
 
 test_that("centred wood density has stem-weighted mean exactly 1 and rejects NA", {
