@@ -4,13 +4,12 @@
 #          non-neutral taxa (fitness-equivalence metric for H2b).
 # Input Origin Scripts: 01_CombinePinhoJuruaData.R; 07_GetPlotSubsets.R
 # Output: Outputs/SloanOutput.RDS, NonNeutralTaxa.csv, NonNeutralTaxaTable.csv,
-#         NonNeutralProportions.csv; Figures S3, S4, S5
+#         NonNeutralProportions.csv, SloanR2_ByRegion.csv; Figures S3, S4
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
 source("Code/Functions/config.R"); check_project_root()
 source("Code/Functions/sloan_helpers.R")
-source("Code/Functions/permutation_helpers.R")
 
 comm <- read_required_csv(out_path("comm"))
 plot_subsets <- readRDS(out_path("PlotSubsets", ext = "RDS"))
@@ -39,21 +38,33 @@ last_fits <- replicates[[N_SUBSAMPLES]]$fits
 ggsave("Figures/Figure_ExampleSLoanFits.png",
        cowplot::plot_grid(plotlist = imap(last_fits, plot_sloan_fit)))
 
-region_rank_plot <- c(PGM = 1, STM = 2, Balbina = 3, Jurua = 4)
 p_avg <- sloan_stats |>
-  mutate(order = region_rank_plot[region]) |>
-  ggplot(aes(x = reorder(region, order), y = r2pois, color = region, fill = region)) +
+  mutate(region = factor(region, levels = REGIONS)) |>
+  ggplot(aes(x = region, y = r2pois, color = region, fill = region)) +
   geom_violin(alpha = 0.5) +
   theme_classic() +
-  theme(axis.line.x = element_line(arrow = grid::arrow(length = unit(0.3, "cm"), ends = "both")),
-        axis.title.x = element_text(angle = 0)) +
   ggsci::scale_color_npg() + ggsci::scale_fill_npg() +
-  labs(x = "More Degraded                                                                   Less Degraded")
+  labs(x = "Region", y = "Poisson random sampling R2") +
+  theme(legend.position = "none")
 ggsave("Figures/Figure_SloanAvgFit.png", p_avg, height = 8, width = 8)
 
-# Blocked permutation test of an ordinal regional trend in R2
-region_rank_test <- c(STM = 1, PGM = 1, Balbina = 2, Jurua = 3)
-perm <- sloan_stats |> mutate(order = region_rank_test[region], dv = r2binom) |> run_permutation_test(1000)
+# Region-level summary of neutral-model fit (no ordinal ranking of regions assumed):
+# mean and 95% interval across the replicate subsamples, and the paired (same-seed)
+# difference from the undisturbed reference region (Jurua)
+q025 <- \(x) unname(quantile(x, 0.025)); q975 <- \(x) unname(quantile(x, 0.975))
+r2_by_region <- sloan_stats |>
+  left_join(select(filter(sloan_stats, region == "Jurua"), seed, r2pois_jurua = r2pois), by = "seed") |>
+  mutate(diff_from_jurua = r2pois - r2pois_jurua) |>
+  group_by(region) |>
+  summarise(n_subsamples = n(),
+            r2pois_mean = mean(r2pois), r2pois_q025 = q025(r2pois), r2pois_q975 = q975(r2pois),
+            diff_from_jurua_mean = mean(diff_from_jurua),
+            diff_from_jurua_q025 = q025(diff_from_jurua), diff_from_jurua_q975 = q975(diff_from_jurua),
+            prop_subsamples_below_jurua = mean(diff_from_jurua < 0),
+            .groups = "drop") |>
+  arrange(factor(region, levels = REGIONS))
+print(r2_by_region, width = Inf)
+write.csv(r2_by_region, out_path("SloanR2_ByRegion"), row.names = FALSE)
 
 # 3) Non-neutral taxa ---------------------------------------------------------------------------
 taxa_long <- map_dfr(replicates, "taxa")
