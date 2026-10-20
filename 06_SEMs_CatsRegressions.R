@@ -2,7 +2,7 @@
 # Purpose: H2a - SEMs testing whether CATS trait selection (fitness non-equivalence) mediates the
 #          effect of forest loss on absolute EEoS deviation. Figure 2.
 # Input Origin Scripts: 03_FitEEOS.py; 05_FitCatsRegressions.R
-# Output: Outputs/H2a_{Model_Comparison,Parameter_Estimates,LRT}_<suffix>.csv; Figures/Figure_H2a*.png
+# Output: Outputs/H2a_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv; Figures/Figure_H2a*.png
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
@@ -17,6 +17,9 @@ res <- fit_mediation_suite(plot_data, x = "disturbedcover", m = "CATS_pois", y =
 print(res$lrt)
 print(cor.test(plot_data$absdev, plot_data$CATS_pois))
 write_mediation_outputs(res, "H2a", suffix)
+# Indirect effect a*b of forest loss via the mediator, percentile bootstrap CI (2,000 draws)
+write.csv(fit_indirect_effect(plot_data, "disturbedcover", "CATS_pois", "absdev"),
+          out_path("H2a_IndirectEffect", suffix), row.names = FALSE)
 
 # Sensitivity: 3-trait CATS (Hmax is missing for Jurua-only taxa, so the 4-trait model drops
 # ~44% of Jurua stems) and a diagnostic stem-abundance metacommunity offset

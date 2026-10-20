@@ -2,7 +2,7 @@
 # Purpose: H2b - SEMs testing whether the relative abundance of non-neutral taxa mediates the
 #          effect of forest loss on absolute EEoS deviation. Figure 3.
 # Input Origin Scripts: 03_FitEEOS.py; 08_FitOverallSloanAndExtractNonneutralAbundances.R
-# Output: Outputs/H2b_{Model_Comparison,Parameter_Estimates,LRT}_<suffix>.csv; Figures/Figure_H2b*.png
+# Output: Outputs/H2b_{Model_Comparison,Parameter_Estimates,LRT,IndirectEffect}_<suffix>.csv; Figures/Figure_H2b*.png
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
@@ -16,6 +16,9 @@ plot_data <- load_and_prepare_plot_data(suffix, need = "nonneutral")
 res <- fit_mediation_suite(plot_data, x = "disturbedcover", m = "proportionNonNeutral", y = "absdev")
 print(res$lrt)
 write_mediation_outputs(res, "H2b", suffix)
+# Indirect effect a*b of forest loss via the mediator, percentile bootstrap CI (2,000 draws)
+write.csv(fit_indirect_effect(plot_data, "disturbedcover", "proportionNonNeutral", "absdev"),
+          out_path("H2b_IndirectEffect", suffix), row.names = FALSE)
 
 fig <- plot_mediation_panels(
   plot_data, "disturbedcover", "proportionNonNeutral", "absdev", color_var = "Region",
