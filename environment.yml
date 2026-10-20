@@ -1,0 +1,10 @@
+name: EEOS-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy=1.26.4
+  - scipy=1.14.1
+  - pandas=2.2.2
+  - pytest
+# Run with PYTHONNOUSERSITE=1 (run_all.R sets this) so packages in ~/.local cannot shadow these pins.

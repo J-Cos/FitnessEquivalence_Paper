@@ -1,39 +1,44 @@
 # --------------------------------------------
-# Purpose: Fits EEOS to macrostates
+# Purpose: Fits the Ecological Equation of State (EEoS; exact METE sum-and-integral) to plot
+#          macrostates and computes the signed deviation dev = ln(B_obs) - ln(B_pred).
 # Input Origin Scripts: 02_GetEcosystemMacrostates.R
-# Output: csv of ecosystem macrostates with predicted B and dev
+# Usage: python Code/03_FitEEOS.py [suffix ...]   (default: all six scalings)
+# Output: Outputs/EEOSPreds_<suffix>.csv (macrostates + B_pred, dev, constraint errors con_N, con_E)
 # ---------------------------------------------------
+
+import os
+import sys
 
 import numpy as np
 import pandas as pd
-import sys
-import os
 
-# Ensure we can import from Functions regardless of invocation directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
-proj_root = os.path.abspath(os.path.join(script_dir, ".."))
-if proj_root not in sys.path:
-    sys.path.insert(0, proj_root)
-if script_dir not in sys.path:
-    sys.path.insert(0, script_dir)
+sys.path.insert(0, script_dir)
+from Functions.eeos_functions import biomass, constraints, mete_lambdas  # noqa: E402
 
-try:
-    from Code.Functions.eeos_functions import *
-except ModuleNotFoundError:
-    from Functions.eeos_functions import *
+ALL_SUFFIXES = ["harte_nowd", "harte_wd", "quad_nowd", "quad_wd", "mte_wd", "chave"]
 
 
-# Read suffix from command line arguments
-suffix = sys.argv[1] if len(sys.argv) > 1 else "harte_wd"
+def fit_eeos(df):
+    """Add predicted biomass, deviation and METE constraint errors to a macrostate table."""
+    out = df.copy()
+    out["B_pred"] = out.apply(biomass, axis=1)
+    out["dev"] = np.log(out["B"]) - np.log(out["B_pred"])
+    con = out.apply(lambda s: constraints(mete_lambdas(s, thresh=False), s), axis=1)
+    out["con_N"] = [c[0] for c in con]
+    out["con_E"] = [c[1] for c in con]
+    return out
 
-# Read CSV
-df = pd.read_csv(f"Outputs/MacrostatesHarteWD_{suffix}.csv")
 
-# Apply biomass row-wise
-df['B_pred'] = df.apply(biomass, axis=1)
-df['dev'] = np.log(df['B'])-np.log(df['B_pred'])
+def main(suffixes):
+    for suffix in suffixes:
+        if suffix not in ALL_SUFFIXES:
+            raise ValueError(f"Unknown suffix {suffix!r}; expected one of {ALL_SUFFIXES}")
+        preds = fit_eeos(pd.read_csv(f"Outputs/Macrostates_{suffix}.csv"))
+        preds.to_csv(f"Outputs/EEOSPreds_{suffix}.csv", index=False)
+        worst = np.abs(preds[["con_N", "con_E"]]).to_numpy().max()
+        print(f"EEoS fitted for {suffix}: {len(preds)} plots, max |constraint error| = {worst:.2e}")
 
-# Save to new CSV
-df.to_csv(f"Outputs/EEOSPredsHarteWD_{suffix}.csv", index=False)
-if suffix == "harte_wd":
-    df.to_csv("Outputs/EEOSPredsHarteWD.csv", index=False)
+
+if __name__ == "__main__":
+    main(sys.argv[1:] or ALL_SUFFIXES)

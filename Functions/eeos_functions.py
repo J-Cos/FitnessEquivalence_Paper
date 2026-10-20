@@ -103,7 +103,7 @@ def biomass(s,power=4/3):
     s are state variables, call S, N, or E
     power is by default 4/3, but can be changed to test other scaling relationships
     '''
-    if np.isnan(s['E']) | np.isnan(s['S']) | np.isnan(s['N']):
+    if np.isnan(s['E']) or np.isnan(s['S']) or np.isnan(s['N']):
         b=np.nan
         return b
     else:
@@ -122,7 +122,7 @@ def biomass_approx(s,order=0):
     order indicates whether or not to include a first order correction. The default is to not, thus order=0.
     Change order=1 if you want to include the correction.'''
     # Get mete lambdas
-    if np.isnan(s['E']) | np.isnan(s['S']) | np.isnan(s['N']):
+    if np.isnan(s['E']) or np.isnan(s['S']) or np.isnan(s['N']):
         b=np.nan
     else:    
         l = mete_lambdas(s)
