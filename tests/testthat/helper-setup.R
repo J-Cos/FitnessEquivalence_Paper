@@ -1,0 +1,15 @@
+# Loaded automatically by testthat before the tests (working directory = Code/tests/testthat).
+suppressMessages({library(dplyr); library(tidyr); library(tibble); library(purrr)})
+PROJECT_ROOT <- normalizePath(file.path(getwd(), "..", "..", ".."))
+for (f in c("config", "macrostates", "data_prep", "sem_helpers", "plot_helpers", "sloan_helpers")) {
+  source(file.path(PROJECT_ROOT, "Code", "Functions", paste0(f, ".R")))
+}
+
+# Toy community: 3 plots, 8 stems, 4 species (DBH in cm, minimum 10)
+toy_comm <- tibble(
+  Region = c("Jurua", "Jurua", "Jurua", "PGM", "PGM", "PGM", "STM", "STM"),
+  Region_Plot = c("J1", "J1", "J1", "P1", "P1", "P1", "S1", "S1"),
+  Binomial_correct = c("a", "b", "b", "a", "c", "c", "d", "a"),
+  DBH = c(10, 20, 35, 12, 50, 15, 80, 10)
+)
+toy_traits <- tibble(Binomial_correct = c("a", "b", "c", "d"), WD = c(0.5, 0.7, 0.4, 0.9))
