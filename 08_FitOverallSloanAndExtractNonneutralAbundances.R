@@ -58,26 +58,14 @@ perm <- sloan_stats |> mutate(order = region_rank_test[region], dv = r2binom) |>
 # 3) Non-neutral taxa ---------------------------------------------------------------------------
 taxa_long <- map_dfr(replicates, "taxa")
 nn <- classify_nonneutral_taxa(taxa_long)
-trait_table <- read_required_csv("Data/traits.csv")
+trait_table <- read_required_csv(out_path("traits"))
 nn_taxa <- nn$wide |>
   left_join(summarise(group_by(nn$long, sp = Binomial_correct), Neutrality = paste(sort(unique(Neutrality)), collapse = "/")),
             by = "sp") |>
   left_join(trait_table, by = join_by(sp == Binomial_correct))
+stopifnot(!anyNA(nn_taxa$WD), !anyNA(nn_taxa$LMA))   # Hmax is unavailable for Jurua-only taxa
 write.csv(nn_taxa, out_path("NonNeutralTaxa"))
 write.csv(rename(select(nn$wide, sp, all_of(REGIONS)), Binomial = sp), out_path("NonNeutralTaxaTable"))
-
-# Trait distribution of non-neutral taxa (Figure S5)
-p_traits <- nn_taxa |>
-  pivot_longer(all_of(REGIONS), names_to = "RegionNeutral", values_to = "NeutralScore") |>
-  filter(NeutralScore == 1) |>
-  mutate(across(c(WD, lnSM, LMA, Hmax), \(x) as.numeric(scale(x)))) |>
-  pivot_longer(c(WD, lnSM, LMA, Hmax), names_to = "TraitName", values_to = "TraitScore") |>
-  ggplot() +
-  geom_boxplot(aes(x = TraitName, y = TraitScore, fill = RegionNeutral)) +
-  ggsci::scale_fill_npg() +
-  geom_hline(yintercept = 0, linetype = 2) +
-  theme_classic()
-ggsave("Figures/Figure_traitsOfNonneutrals.png", p_traits, height = 8, width = 8)
 
 # 4) Per-plot relative abundance of non-neutral taxa --------------------------------------------
 proportions <- nonneutral_proportions(comm, nn$long)
