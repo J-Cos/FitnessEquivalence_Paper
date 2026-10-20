@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import fsolve, minimize_scalar
@@ -74,6 +76,15 @@ def beta_constraint(b,s):
     # Old constraint
     #return b*np.log(1/(1-np.exp(-b)))-s['S']/s['N'] #Old
 
+def _check_constraints(ls, s, thresh=0.05):
+    '''Warn if either METE constraint (N/S or E/S) deviates from its exact value by more than thresh
+    (relative), in either direction. Returns the relative constraint errors.'''
+    con = constraints(ls, s)
+    if np.any(np.abs(con) > thresh):
+        warnings.warn("METE constraints not satisfied within {:.0f}% for S={}, N={}, E={}: {}".format(
+            thresh*100, s['S'], s['N'], s['E'], np.round(con, 4)))
+    return con
+
 def mete_lambdas(s,b0=0.0001,thresh=0.05):
     '''This returns the METE lambdas for a given set of state variables.
     Inputs s as state variables, call S, N, or E
@@ -86,9 +97,7 @@ def mete_lambdas(s,b0=0.0001,thresh=0.05):
     l2 = s['S']/(s['E']-s['N']) 
     ls = np.array([beta-l2,l2]) # Only 2 compared to 5 from dynamete
     if thresh:
-        con = constraints(ls,s)
-        if np.any(con > thresh):
-            print("Constraints are not satisfied within {:.0f}%".format(thresh*100))
+        _check_constraints(ls, s, thresh)
     return ls
 
 
