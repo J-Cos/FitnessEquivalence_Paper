@@ -1,62 +1,114 @@
-# Fitness Equivalence Paper Codebase
+# Fitness equivalence and deviations from the Ecological Equation of State
 
-This repository contains the code and data for the Williams et al. analysis of fitness equivalence in tropical forests.
+Code for Williams et al., *Stressor-induced reductions in tree fitness equivalence explain systematic
+deviations from macroecological theory* (Journal of Ecology, JEcol-2026-0304).
 
-## Directory Structure
+The pipeline computes plot macrostates (S, N, E, B) for 224 Amazonian forest plots and fits the Ecological
+Equation of State (EEoS; exact METE sum-and-integral). It then tests:
+- **H1:** whether forest loss increases EEoS deviation;
+- **H2a–c:** whether three measures of fitness (non-)equivalence mediate that effect:
+  - **H2a:** CATS trait-selection R²;
+  - **H2b:** relative abundance of non-neutral taxa;
+  - **H2c:** neutral random-sampling model fit.
 
-- **Code/**: R and Python scripts for analysis.
-- **Data/**: Input datasets (CSV, Shapefiles).
-- **Outputs/**: Generated results and figures.
-- **Figures/**: Final figures for the manuscript.
+## Layout
 
-## Setup
+This repository is the `Code/` folder of the project. Scripts are run from the **project root**, the folder
+that contains `Code/`, `Data/`, `Outputs/` and `Figures/`:
 
-### Prerequisites
+```
+project_root/
+├── Code/       this repository: numbered scripts, Functions/, tests/, run_all.R
+├── Data/       input data (not version controlled; see "Data")
+├── Outputs/    generated tables, plus logs/ (created by the pipeline)
+└── Figures/    generated figures (created by the pipeline)
+```
 
-- **R**: Version 4.0 or higher recommended.
-- **Python**: Version 3.8 or higher recommended.
+Only scripts, this README and the environment lockfiles are tracked (see `.gitignore`).
 
-### Dependencies
+## Requirements
 
-Common R and Python packages as detailed in scripts.
+- **R** 4.3.3. Restore the recorded package versions with `renv::restore(lockfile = "Code/renv.lock")`.
+  Main packages: tidyverse, lavaan, cowplot, ggsci, boot, lmtest, sandwich, MASS, minpack.lm, Hmisc,
+  bbmle, terra, sf, rnaturalearth, tidyterra, testthat.
+- **Python** 3.12 with numpy 1.26.4, scipy 1.14.1, pandas 2.2.2. Create it with
+  `conda env create -f Code/environment.yml`.
+  - `run_all.R` uses `/home/j/miniconda3/envs/EEOS-env/bin/python` if it exists. Otherwise it uses the
+    interpreter named in the environment variable `EEOS_PYTHON`, then `python3`.
+  - It sets `PYTHONNOUSERSITE=1`, so packages in `~/.local` cannot shadow the pinned versions.
 
-### Data Access
+## Data
 
-All data files are publicly available at the links provided in the main text. Specicifically, download the following files from these links and place this in the `Data/` directory:
+Place the following in `Data/`. All are publicly available from the sources cited in the manuscript.
 
-- **comm.csv**: Community matrix (Site x Species abundance).
-    - `Region`: Sampling region.
-    - `Region_Plot`: Unique plot identifier.
-    - `Binomial_correct`: Corrected species binomial name.
-    - `Genus`, `family`: Taxonomic classification.
-    - `DBH`: Diameter at Breast Height.
-- **traits.csv**: Functional traits data.
-    - `Binomial_correct`: Species name (key to `comm.csv`).
-    - `WD`: Wood Density.
-    - `LMA`: Leaf Mass per Area.
-    - `SM`: Seed Mass.
-- **env.csv**: Environmental variables for each plot.
-- **Jurua_Flora_FullDB.csv**: Raw flora database for Jurua region.
-- **Ecoregions2017/**: Shapefiles for ecoregions.
+| File | Content |
+| :--- | :--- |
+| `comm.csv` | Pinho et al. stems (Balbina, PGM, STM): `Region`, `Region_Plot`, `Binomial_correct`, `Genus`, `family`, `DBH` (cm) |
+| `traits.csv` | Pinho et al. species traits: `Binomial_correct`, `WD`, `lnSM`, `LMA`, `Hmax`, `DS` |
+| `Jurua_Flora_FullDB.csv` | Scabin et al. Juruá stems and traits (`parcel`, `species`, `genus`, `family`, `DBH`, `WD`, `SM`, `LMA`) |
+| `env.csv` | Plot environment incl. coordinates (`X`, `Y`) and forest cover in a 2 km radius (`fc2000`). Juruá plots are absent (intact forest; forest cover set to 1). |
+| `Ecoregions2017/` | Ecoregions 2017 shapefile (map in Figure 1A) |
 
-## Running the Analysis
+## Running
 
-The scripts are numbered to indicate the order of execution:
+```bash
+Rscript Code/run_all.R            # full pipeline (~10 min); logs in Outputs/logs/
+Rscript Code/run_all.R 04 06      # only selected steps, by script number
+```
 
-1.  `01_CombinePinho&JuaraData.R`: Merges datasets.
-2.  `02_GetEcosystemMacrostates.R`: Calculates ecosystem macrostates.
-3.  `02b_MakeMacrostateScatterplots.r`: Visualizes macrostates.
-4.  `03_FitEEOS.py`: Fits the Ecological Equation of State (EEOS) model.
-    *   Calls: `Functions/eeos_functions.py`
-5.  `04_FitSimpleEeosDevRegression.r`: Regresses EEOS deviations and makes figure 1
-6.  `05_FitCatsRegressions.r`: Fits categorical regressions.
-7.  `06_SEMs_CatsRegressions.r`: Structural Equation Models for categorical regressions and figure 2
-8.  `07_getPlotSubsets.r`: Subsets plots.
-9.  `08_FitOverallSloanAndExtractNonneutralAbundances.r`: Fits Sloan neutral model.
-    *   Calls: `Functions/runPermutationTest().r`
-    *   Calls: `Functions/sncm.fit().R`
-10. `08b_TestNonNeutralTraitDifferences.r`: Tests trait differences.
-11. `09_SEMs_NonNeutralAbundances.r`: SEMs for non-neutral abundances and figure 3.
-12. `10_FitForestCoverSubgroupSloans.r`: Fits Sloan model for forest cover subgroups.
-    *   Calls: `Functions/sncm.fit().R`
-13. `11_SEMs_ForestCoverSubGrouSLoans.r`: SEMs for forest cover subgroups and figure 4.
+Each step runs in a fresh process and the pipeline stops at the first failure. The R session info and
+Python versions are written to `Outputs/logs/`.
+
+| Step | Script | Main outputs | Manuscript item |
+| :--- | :--- | :--- | :--- |
+| 01 | `01_CombinePinhoJuruaData.R` | `comm.csv`, `traits.csv` | Data |
+| 02 | `02_GetEcosystemMacrostates.R` | `Macrostates_<scaling>.csv` (6 scalings) | Methods |
+| 02b | `02b_MakeMacrostateScatterplots.R` | `FigureS1.png` | Fig. S1 |
+| 03 | `03_FitEEOS.py` | `EEOSPreds_<scaling>.csv` (B_pred, dev, METE constraint errors) | Methods |
+| 04 | `04_FitSimpleEeosDevRegression.R` | `H1_Model_*`, `H1_ANCOVA_*`, `H1_Robustness_*`, `H1_BootstrapCI_*`; `Figure_H1.png`, `Figure_H1_signedsupplement.png` | H1; Fig. 1, Fig. S2 |
+| 05 | `05_FitCatsRegressions.R` | `CatsOutput.csv` | H2a metric |
+| 06 | `06_SEMs_CatsRegressions.R` | `H2a_*` (+ `_3trait`, `_metaAbund` sensitivity); `Figure_H2a.png` | H2a; Fig. 2 |
+| 07 | `07_GetPlotSubsets.R` | plot subsets (RDS) | Methods |
+| 08 | `08_FitOverallSloanAndExtractNonneutralAbundances.R` | `SloanOutput.RDS`, `SloanR2_ByRegion.csv`, `NonNeutralTaxa*.csv`, `NonNeutralProportions.csv`; `Figure_ExampleSLoanFits.png`, `Figure_SloanAvgFit.png` | H2b metric; Table S1; Figs. S3–S4 |
+| 08b | `08b_TestNonNeutralTraitDifferences.R` | `NonNeutralTraitTests.csv`; `Figure_traitsOfNonneutrals.png` | Fig. S5 |
+| 09 | `09_SEMs_NonNeutralAbundances.R` | `H2b_*`; `Figure_H2b.png` | H2b; Fig. 3 |
+| 10 | `10_FitForestCoverSubgroupSloans.R` | `ForestCoverSubgroupSloanFits.csv`; `Figure_sloansubsets_supplement.png` | H2c metric; Fig. S6 |
+| 11 | `11_SEMs_ForestCoverSubgroupSloans.R` | `H2c_*`; `Figure_H2c.png` | H2c; Fig. 4 |
+| 12 | `12_SensitivityAnalysis.R` | `SensitivityAnalysisResults_{Absolute,Signed,long}.csv` | Table S2 |
+| 13 | `13_WoodDensityDecomposition.R` | `WoodDensityDecomposition.csv` | SI Note S3 |
+| 14 | `14_NS_TruncationCounterfactual.py` | `TableS3_NS_Counterfactual*.csv` | Table S3 |
+
+`<scaling>` is one of the six macrostate formulations. All are defined once, in `Functions/macrostates.R`:
+
+| Suffix | Formulation |
+| :--- | :--- |
+| `harte_nowd` | ε = DBH/DBH_min, m = ε^(4/3) |
+| `harte_wd` | **main analysis**: as `harte_nowd`, with m multiplied by centred wood density |
+| `quad_nowd` | ε = (DBH/DBH_min)², m = ε^(4/3) |
+| `quad_wd` | as `quad_nowd`, with m multiplied by centred wood density |
+| `mte_wd` | m = (DBH/DBH_min)^(8/3) × centred wood density, ε = m^(3/4) |
+| `chave` | Chave et al. (2014) allometry with DBH in cm, rescaled so the smallest stem has m = ε = 1 |
+
+## Code organisation
+
+| File | Contents |
+| :--- | :--- |
+| `Functions/config.R` | Constants (regions, scalings, sample sizes), project-root check, paths, Python lookup |
+| `Functions/macrostates.R` | Organism-level ε and m for each scaling; plot macrostates |
+| `Functions/eeos_functions.py` | METE Lagrange multipliers, constraint check, exact EEoS biomass |
+| `Functions/data_prep.R` | Validated loading and joining of the analysis tables (fails loudly on missing data) |
+| `Functions/sem_helpers.R` | Mediation SEM suite: full/partial mediation and common cause, LRT, AICc, indirect effect |
+| `Functions/plot_helpers.R` | Marginal common-slope lines, mediation panels, figure saving, regional map |
+| `Functions/sloan_helpers.R` | Sloan neutral model and random-sampling models (after Burns et al. 2016); non-neutral taxa |
+
+## Tests
+
+```bash
+Rscript -e 'testthat::test_dir("Code/tests/testthat")'
+PYTHONNOUSERSITE=1 /home/j/miniconda3/envs/EEOS-env/bin/python -m pytest Code/tests -q
+```
+
+- **Unit tests** use small synthetic data and need no outputs.
+- **`test-integration.R`** checks the real outputs and is skipped if they are absent.
+- **`tests/compare_to_baseline.R`** is the golden-master check used during refactoring. It compares
+  `Outputs/` against an archived baseline run.
