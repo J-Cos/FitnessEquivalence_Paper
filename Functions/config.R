@@ -7,16 +7,10 @@ REGIONS        <- c("Jurua", "Balbina", "STM", "PGM")   # factor order; Jurua (u
 REGION_ABBR    <- c(Jur = "Jurua", Bal = "Balbina", STM = "STM", PGM = "PGM")
 REGION_DUMMIES <- c("Reg_Balbina", "Reg_STM", "Reg_PGM")
 
-MAIN_SUFFIX      <- "harte_wd"
-SCALING_SUFFIXES <- c("harte_nowd", "harte_wd", "quad_nowd", "quad_wd", "mte_wd", "chave")
-SCALING_LABELS   <- c(harte_nowd = "Option 1: Linear, No WD",
-                      harte_wd   = "Option 2: Linear, With WD (Original)",
-                      quad_nowd  = "Option 3: Quadratic, No WD",
-                      quad_wd    = "Option 4: Quadratic, With WD (Metab-First)",
-                      mte_wd     = "Option 5: Biomass-First Power Law (MTE)",
-                      chave      = "Option 6: Chave et al. (2014) Allometry, With WD")
+DBH_MIN_CM        <- 10.0   # census stem diameter threshold (cm); reference stem has e = 1
+BIOMASS_CACHE_DIR <- "Data/BIOMASS_cache"
 
-# Jurua plots are absent from Data/env.csv; centroid used only for the regional map (Figure 1A)
+# Jurua plots are absent from Data/env.csv; regional centroid used for BIOMASS::computeAGB and Figure 1A
 JURUA_CENTROID <- list(lon = -67.71, lat = -5.56, n = 30)
 
 N_SUBSAMPLES   <- 100  # random plot subsamples per region (H2b)
@@ -30,25 +24,33 @@ check_project_root <- function() {
   }
   dir.create("Outputs", showWarnings = FALSE)
   dir.create("Figures", showWarnings = FALSE)
+  dir.create(BIOMASS_CACHE_DIR, recursive = TRUE, showWarnings = FALSE)
+  options(BIOMASS.cache = normalizePath(BIOMASS_CACHE_DIR))
   invisible(TRUE)
 }
 
-#' Read the macrostate-scaling suffix from the command line
-get_suffix_arg <- function(default = MAIN_SUFFIX) {
-  args <- commandArgs(trailingOnly = TRUE)
-  suffix <- if (length(args) > 0) args[1] else default
-  if (!suffix %in% SCALING_SUFFIXES) stop("Unknown suffix '", suffix, "'. Use one of: ",
-                                          paste(SCALING_SUFFIXES, collapse = ", "))
-  suffix
-}
-
 #' Locate the Python interpreter for the EEoS fits (env var EEOS_PYTHON overrides)
-get_python <- function() {
-  candidates <- c(Sys.getenv("EEOS_PYTHON"),
-                  "/home/j/miniconda3/envs/EEOS-env/bin/python",
-                  unname(Sys.which("python3")))
+get_python <- function(env_name = "EEOS-env") {
+  conda_bin  <- unname(Sys.which("conda"))
+  conda_root <- if (nzchar(conda_bin)) dirname(dirname(conda_bin)) else ""
+  home_roots <- file.path(path.expand("~"), c("miniconda3", "miniforge3", "mambaforge", "anaconda3"))
+  env_dirs   <- unique(c(
+    if (basename(Sys.getenv("CONDA_PREFIX")) == env_name) Sys.getenv("CONDA_PREFIX"),
+    if (nzchar(conda_root)) file.path(conda_root, "envs", env_name),
+    file.path(home_roots, "envs", env_name)
+  ))
+  env_py <- unlist(lapply(env_dirs, function(d) {
+    c(file.path(d, "bin", "python"), file.path(d, "python.exe"))
+  }))
+
+  candidates <- c(
+    Sys.getenv("EEOS_PYTHON"),
+    env_py,
+    unname(Sys.which("python3")),
+    unname(Sys.which("python"))
+  )
   candidates <- candidates[nzchar(candidates) & file.exists(candidates)]
-  if (length(candidates) == 0) stop("No Python interpreter found; set EEOS_PYTHON.")
+  if (length(candidates) == 0) stop("No Python interpreter found; activate ", env_name, " or set EEOS_PYTHON.")
   candidates[1]
 }
 

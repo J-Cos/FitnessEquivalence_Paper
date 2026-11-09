@@ -1,125 +1,108 @@
 # --------------------------------------------
-# Purpose: H1 - linear regressions of EEoS deviation (absolute and signed; co-primary) on forest loss with
-#          regional fixed effects, robustness checks, ANCOVA slope-homogeneity test, Figure 1 and S2.
+# Purpose: H1 - linear regressions of EEoS deviation (signed primary; absolute retained) on forest
+#          loss with regional fixed effects, ANCOVA slope-homogeneity test, robustness checks
+#          (including inverse-allometric-variance WLS and high-CV trimming), allometric uncertainty
+#          benchmark, 2x2 Figure 1 (map, B_obs vs. B_pred with 1:1 line & CV bars, dev vs. forest
+#          loss, dev by region), and Figure S3 (absolute deviation).
 # Input Origin Scripts: 03_FitEEOS.py
-# Output: Outputs/H1_*_<suffix>.csv; Figures/Figure_H1*.png; Figures/diagnostics/
+# Output: Outputs/H1_Signed_*.csv; Outputs/H1_Absolute_*.csv; Outputs/H1_AllometricBenchmark.csv;
+#         Figures/Figure_H1.png (Fig. 1);
+#         Figures/Figure_H1_absolutesupplement.png (SI Appendix, Fig. S3);
+#         Figures/diagnostics/
+#
+# Suggested Caption (PNAS style) for Figure_H1.png (Fig. 1):
+#   Landscape forest loss drives systematic negative deviations from the Ecological Equation of
+#   State (EEoS) across 224 0.25-ha Amazonian forest plots (stems >= 10 cm DBH). (A) Study regions
+#   across the Tropical and Subtropical Moist Broadleaf Forests biome (grey shading; Dinerstein et
+#   al., 2017); solid circles mark regional centroids and plot counts in intact Jurua (n = 30),
+#   Balbina (n = 37), Santarem (STM; n = 63), and Paragominas (PGM; n = 94). (B) Observed versus
+#   zero-parameter METE/EEoS-predicted dimensionless plot biomass in natural-log units [ln(B) vs.
+#   ln(B_pred); dotted 1:1 line; vertical bars show +/- 1 sigma_allom log-scale uncertainty across
+#   1,000 BIOMASS Monte Carlo draws]. (C) Signed EEoS deviation, ln(B / B_pred), versus disturbed
+#   forest cover within a 2,000-m radius (proportion of non-forest cover, 1 - fc2000; intact Jurua
+#   fixed at 0; horizontal dotted line marks exact EEoS agreement at zero). The solid black line and
+#   grey ribbon show the marginal common-slope ordinary least-squares prediction and 95% confidence
+#   interval controlling for regional fixed effects (holding regional composition at sample
+#   proportions). (D) Regional distributions of signed EEoS deviation (boxes: median and
+#   interquartile range [IQR]; whiskers: 1.5 x IQR; points: individual plots), providing the
+#   regional color key across panels (see SI Appendix, Fig. S3 for the corresponding absolute
+#   deviation analysis).
+#
+# Suggested Caption (PNAS style) for Figure_H1_absolutesupplement.png (Fig. S3):
+#   Unsigned (absolute) EEoS deviation, |ln(B / B_pred)|, across landscape disturbance and regions
+#   (n = 224 plots). (A) Absolute EEoS deviation versus disturbed forest cover within a 2,000-m
+#   radius (solid black line and grey ribbon: marginal common-slope ordinary least-squares
+#   prediction and 95% confidence interval controlling for regional fixed effects). (B) Regional
+#   distributions of absolute EEoS deviation (boxes: median and IQR; whiskers: 1.5 x IQR; points:
+#   individual plots), providing the color key for A.
 # ---------------------------------------------------
 
 suppressMessages({library(tidyverse); library(lmtest); library(sandwich)})
 source("Code/Functions/config.R"); check_project_root()
-invisible(lapply(c("data_prep", "plot_helpers"), \(f) source(sprintf("Code/Functions/%s.R", f))))
+invisible(lapply(c("data_prep", "regression_helpers", "plot_helpers"),
+                 \(f) source(sprintf("Code/Functions/%s.R", f))))
 
-suffix <- get_suffix_arg()
 set.seed(1)
-plot_data <- load_and_prepare_plot_data(suffix)
-dir.create("Figures/diagnostics", showWarnings = FALSE)
+plot_data <- load_and_prepare_plot_data()
 
-#' Main model, CIs, ANCOVA interaction test and robustness checks for one outcome
-fit_h1 <- function(d, outcome) {
-  form <- reformulate(c("disturbedcover", "Region"), outcome)
-  fit <- lm(form, data = d)
+# 1) Allometric uncertainty benchmark (comparing |dev| against sigma_allom) ----------------------
+benchmark_tab <- build_allometric_benchmark_table(plot_data)
+write.csv(benchmark_tab, out_path("H1_AllometricBenchmark"), row.names = FALSE)
 
-  coef_tab <- as.data.frame(summary(fit)$coefficients)
-  ci <- confint(fit)
-  coef_tab$CI_2.5 <- ci[, 1]; coef_tab$CI_97.5 <- ci[, 2]
-  coef_tab$Term <- rownames(coef_tab)
-
-  ancova <- as.data.frame(anova(fit, lm(reformulate("disturbedcover * Region", outcome), data = d)))
-
-  # Robustness: HC3 sandwich SEs; Huber and MM robust regression; median (quantile) regression;
-  # Gamma GLM with log link (absolute deviation only: positive, right-skewed); and exclusion of
-  # influential plots (Cook's D > 4/n; reported as sensitivity only - these are valid plots)
-  hc3 <- coeftest(fit, vcov = vcovHC(fit, type = "HC3"))
-  rlm_fit <- MASS::rlm(form, data = d, maxit = 100)
-  mm_fit <- robustbase::lmrob(form, data = d, setting = "KS2014")
-  set.seed(1)
-  rq_sum <- suppressWarnings(summary(quantreg::rq(form, tau = 0.5, data = d), se = "boot", R = 2000))
-  gamma_coef <- if (all(d[[outcome]] > 0)) {
-    summary(glm(form, family = Gamma(link = "log"), data = d))$coefficients
-  } else NULL
-  influential <- d$Region_Plot[cooks.distance(fit) > 4 / nobs(fit)]
-  fit_noinf <- lm(form, data = filter(d, !Region_Plot %in% influential))
-  bp <- bptest(fit)
-  robust <- tibble(
-    Term = rownames(coef_tab), Estimate = coef(fit),
-    HC3_SE = hc3[, "Std. Error"], HC3_p = hc3[, "Pr(>|t|)"],
-    RLM_Estimate = coef(rlm_fit),
-    MM_Estimate = coef(mm_fit), MM_p = summary(mm_fit)$coefficients[, 4],
-    Median_Estimate = rq_sum$coefficients[, 1], Median_p = rq_sum$coefficients[, 4],
-    GammaLog_Estimate = if (is.null(gamma_coef)) NA_real_ else gamma_coef[, 1],
-    GammaLog_p = if (is.null(gamma_coef)) NA_real_ else gamma_coef[, 4],
-    NoInfluential_Estimate = coef(fit_noinf), NoInfluential_p = summary(fit_noinf)$coefficients[, 4],
-    n_influential_excluded = length(influential),
-    BP_statistic = unname(bp$statistic), BP_p = bp$p.value
-  )
-  write.csv(tibble(Region_Plot = influential, cooks_distance = cooks.distance(fit)[cooks.distance(fit) > 4 / nobs(fit)]),
-            out_path(paste0("H1_InfluentialPlots_", ifelse(outcome == "absdev", "Absolute", "Signed")), suffix),
-            row.names = FALSE)
-
-  png(sprintf("Figures/diagnostics/H1_%s_%s_QQ.png", outcome, suffix), width = 900, height = 450)
-  par(mfrow = c(1, 2)); plot(fit, which = c(2, 4)); dev.off()
-
-  # Case-resampling bootstrap CIs (BCa and percentile) for every coefficient
-  set.seed(1)
-  b <- boot::boot(d, function(data, i) coef(lm(form, data = data[i, ])), R = N_BOOT)
-  boot_tab <- map_dfr(seq_along(coef(fit)), function(k) {
-    ci <- boot::boot.ci(b, type = c("bca", "perc"), index = k)
-    tibble(Term = names(coef(fit))[k], Estimate = unname(coef(fit)[k]),
-           BCa_lwr = ci$bca[4], BCa_upr = ci$bca[5], Perc_lwr = ci$percent[4], Perc_upr = ci$percent[5],
-           R = N_BOOT)
-  })
-
-  list(fit = fit, coef_tab = coef_tab, ancova = ancova, robust = robust, influential = influential,
-       boot = boot_tab)
-}
+# 2) Primary (signed deviation: H1_Signed_*) and secondary (absolute deviation: H1_Absolute_*) ---
 N_BOOT <- 10000
+h1_sig <- fit_h1_regression(plot_data, "dev",    n_boot = N_BOOT, seed = 1) |> write_h1_outputs("H1_Signed")
+h1_abs <- fit_h1_regression(plot_data, "absdev", n_boot = N_BOOT, seed = 1) |> write_h1_outputs("H1_Absolute")
+print(h1_sig$coef_tab)
+print(h1_abs$coef_tab)
 
-h1_abs <- fit_h1(plot_data, "absdev")
-h1_sig <- fit_h1(plot_data, "dev")
-print(h1_abs$coef_tab); print(h1_sig$coef_tab)
+# Figures (region colors are directly labelled on the regional boxplot panels) ------------------
+fc_xlab <- "Disturbed forest cover (2000 m radius)"
 
-# Save model results --------------------------------------------------------------------------
-write.csv(h1_sig$coef_tab, out_path("H1_Model_Signed", suffix), row.names = FALSE)
-write.csv(h1_abs$coef_tab, out_path("H1_Model_Absolute", suffix), row.names = FALSE)
-write.csv(mutate(h1_abs$ancova, Model = c("Common Slope (absdev)", "Varying Slopes (absdev)")),
-          out_path("H1_ANCOVA_InteractionTest_Absolute", suffix), row.names = FALSE)
-write.csv(mutate(h1_sig$ancova, Model = c("Common Slope (dev)", "Varying Slopes (dev)")),
-          out_path("H1_ANCOVA_InteractionTest_Signed", suffix), row.names = FALSE)
-write.csv(h1_abs$robust, out_path("H1_Robustness_Absolute", suffix), row.names = FALSE)
-write.csv(h1_sig$robust, out_path("H1_Robustness_Signed", suffix), row.names = FALSE)
-write.csv(h1_abs$boot, out_path("H1_BootstrapCI_Absolute", suffix), row.names = FALSE)
-write.csv(h1_sig$boot, out_path("H1_BootstrapCI_Signed", suffix), row.names = FALSE)
+# Figure 1 (2x2): A = region map, B = ln(B_obs) vs ln(B_pred) (1:1 + CV bars),
+#                 C = signed dev vs disturbed forest cover, D = signed dev by region
+marg_sig <- get_marginal_predictions(plot_data, "dev", "disturbedcover")
+dev_lims <- range(c(plot_data$dev, marg_sig$lwr, marg_sig$upr, 0), na.rm = TRUE)
 
-# Figures ---------------------------------------------------------------------------------------
-deviation_scatter <- function(y, ylab, hline = FALSE, y_expand = TRUE) {
-  p <- mediation_panel(plot_data, "disturbedcover", y, "Region", "Disturbed forest cover\n(2000m radius)", ylab,
-                       point_size = 0.5, show_legend = FALSE,
-                       extra = c(list(scale_x_continuous(expand = expansion(mult = c(0, 0.1)))),
-                                 if (y_expand) list(scale_y_continuous(expand = expansion(mult = c(0, 0.1)))),
-                                 if (hline) list(geom_hline(yintercept = 0, linetype = "dotted"))))
-  p
-}
-deviation_violin <- function(y, hline = FALSE) {
-  ggplot(plot_data, aes(x = Region, y = .data[[y]], fill = Region, color = Region)) +
-    (if (hline) geom_hline(yintercept = 0, linetype = "dotted") else NULL) +
-    geom_violin() +
-    theme_classic() +
-    ggsci::scale_fill_npg() + ggsci::scale_color_npg() +
-    (if (!hline) scale_y_continuous(expand = expansion(mult = c(0, 0.1))) else NULL) +
-    theme(axis.title.y = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(),
-          axis.ticks.y = element_blank(), axis.ticks.x = element_blank(), axis.line.y = element_blank()) +
-    xlab(" \n  \n ")
-}
+p1_a <- make_region_map()
+p1_b <- eeos_obs_pred_panel(plot_data)
+p1_c <- mediation_panel(
+  plot_data, x = "disturbedcover", y = "dev", color_var = "Region",
+  xlab = fc_xlab, ylab = "EEoS deviation",
+  show_legend = FALSE,
+  extra = list(
+    geom_hline(yintercept = 0, linetype = "dotted", linewidth = 0.6, color = "black"),
+    scale_y_continuous(limits = dev_lims)
+  )
+)
+p1_d <- region_boxplot_panel(plot_data, y = "dev", ylab = "EEoS deviation",
+                             ylim = dev_lims, hline = 0)
 
-# Figure 1: map, absolute deviation vs forest loss, absolute deviation by region
-fig1 <- cowplot::plot_grid(make_region_map(), deviation_scatter("absdev", "EEOS absolute deviation"),
-                           deviation_violin("absdev"), labels = c("A", "B", "C"),
-                           rel_widths = c(0.5, 1, 0.5), ncol = 3)
-save_figure("Figure_H1", suffix, fig1, height = 4, width = 6, bg = "white", dpi = 1000)
+fig1 <- cowplot::plot_grid(
+  p1_a, p1_b, p1_c, p1_d,
+  labels = c("A", "B", "C", "D"),
+  ncol = 2, align = "hv", axis = "tblr"
+)
+save_figure("Figure_H1", fig1, height = 6.6, width = 7.5)
 
-# Figure S2: signed deviation
-figS2 <- cowplot::plot_grid(deviation_scatter("dev", "EEOS deviation", hline = TRUE, y_expand = FALSE),
-                            deviation_violin("dev", hline = TRUE), labels = c("A", "B"), rel_widths = c(1, 0.5))
-save_figure("Figure_H1_signedsupplement", suffix, figS2, height = 4, width = 4.5, bg = "white")
+# Figure S3 (1x2): absolute EEoS deviation vs disturbed forest cover and by region
+marg_abs <- get_marginal_predictions(plot_data, "absdev", "disturbedcover")
+abs_lims <- range(c(0, plot_data$absdev, marg_abs$lwr, marg_abs$upr), na.rm = TRUE)
 
-message("H1 model results saved to Outputs/ for suffix: ", suffix)
+ps2_a <- mediation_panel(
+  plot_data, x = "disturbedcover", y = "absdev", color_var = "Region",
+  xlab = fc_xlab, ylab = "EEoS absolute deviation",
+  show_legend = FALSE,
+  extra = list(scale_y_continuous(limits = abs_lims))
+)
+ps2_b <- region_boxplot_panel(plot_data, y = "absdev", ylab = "EEoS absolute deviation",
+                              ylim = abs_lims)
+
+fig_s2 <- cowplot::plot_grid(
+  ps2_a, ps2_b,
+  labels = c("A", "B"),
+  ncol = 2, align = "hv", axis = "tblr"
+)
+save_figure("Figure_H1_absolutesupplement", fig_s2, height = 3.5, width = 7.5)
+
+message("H1 model results and figures saved to Outputs/ and Figures/")

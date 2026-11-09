@@ -152,16 +152,32 @@ classify_neutrality <- function(fit) {
     dplyr::arrange(sp)
 }
 
-#' Observed occurrence frequency vs log abundance with Poisson 95% interval
-plot_sloan_fit <- function(fit, title) {
-  fit$vals |>
-    ggplot2::ggplot(ggplot2::aes(y = freq, x = log(p))) +
-    ggplot2::geom_point(alpha = 0.3) +
-    ggplot2::geom_line(ggplot2::aes(y = pois.upr), color = "red") +
-    ggplot2::geom_line(ggplot2::aes(y = pois.lwr), color = "red") +
-    ggplot2::annotate("text", x = -6, y = 0.9, label = paste0("R2=", signif(fit$stats$Rsqr.pois, 2), "\n")) +
-    ggplot2::theme_classic() +
-    ggplot2::ggtitle(title)
+#' Observed occurrence frequency vs relative abundance (log10) with Poisson prediction and 95% interval
+plot_sloan_fit <- function(fit, title = NULL) {
+  v <- fit$vals
+  p_grid <- exp(seq(min(log(v$p)), max(log(v$p)), length.out = 160))
+  pred   <- stats::ppois(fit$stats$Detect, fit$stats$N * p_grid, lower.tail = FALSE)
+  ci     <- Hmisc::binconf(pred * fit$stats$Samples, fit$stats$Samples,
+                           alpha = 0.05, method = "wilson", return.df = TRUE)
+  curve_df <- tibble::tibble(p = p_grid, pois.pred = pred,
+                             pois.lwr = ci[, "Lower"], pois.upr = ci[, "Upper"])
+
+  ggplot2::ggplot(v, ggplot2::aes(x = p, y = freq)) +
+    ggplot2::geom_point(color = "grey68", alpha = 1.0, size = 0.7) +
+    ggplot2::geom_line(data = curve_df, ggplot2::aes(y = pois.pred), color = "black", linewidth = 0.65) +
+    ggplot2::geom_line(data = curve_df, ggplot2::aes(y = pois.lwr),  color = "black", linetype = "dashed", linewidth = 0.42) +
+    ggplot2::geom_line(data = curve_df, ggplot2::aes(y = pois.upr),  color = "black", linetype = "dashed", linewidth = 0.42) +
+    ggplot2::annotate("text", x = min(v$p), y = Inf, hjust = 0, vjust = 1.35, size = 3.0,
+                      label = sprintf("R² = %.2f", fit$stats$Rsqr.pois)) +
+    ggplot2::scale_x_log10() +
+    ggplot2::scale_y_continuous(limits = c(0, 1.03), breaks = c(0, 0.5, 1)) +
+    ggplot2::labs(x = "Relative abundance", y = "Occurrence frequency", title = title) +
+    ggplot2::theme_bw(base_size = 11) +
+    ggplot2::theme(
+      panel.grid   = ggplot2::element_blank(),
+      panel.border = ggplot2::element_rect(color = "black", fill = NA, linewidth = 0.6),
+      plot.title   = ggplot2::element_text(size = 10, face = "bold")
+    )
 }
 
 #' Non-neutral taxa per region from replicate classifications
@@ -188,12 +204,173 @@ classify_nonneutral_taxa <- function(taxa_long, regions = REGIONS) {
   list(long = long, wide = wide)
 }
 
-#' Per-plot proportion of stems belonging to taxa that are non-neutral in the plot's region
+#' Per-plot proportion of stems belonging to taxa that are non-neutral (and LFHA / HFLA) in the plot's region
 nonneutral_proportions <- function(comm, nn_long) {
   comm |>
-    dplyr::left_join(dplyr::mutate(dplyr::select(nn_long, Region, Binomial_correct), nonneutral = 1),
-                     by = c("Region", "Binomial_correct"), relationship = "many-to-one") |>
+    dplyr::left_join(
+      dplyr::select(nn_long, Region, Binomial_correct, Neutrality),
+      by = c("Region", "Binomial_correct"),
+      relationship = "many-to-one"
+    ) |>
     dplyr::group_by(Region, Region_Plot) |>
-    dplyr::summarise(proportionNonNeutral = sum(nonneutral, na.rm = TRUE) / dplyr::n(), .groups = "drop") |>
-    dplyr::select(Region_Plot, proportionNonNeutral)
+    dplyr::summarise(
+      proportionNonNeutral = sum(!is.na(Neutrality)) / dplyr::n(),
+      proportionLFHA       = sum(Neutrality == "LFHA", na.rm = TRUE) / dplyr::n(),
+      proportionHFLA       = sum(Neutrality == "HFLA", na.rm = TRUE) / dplyr::n(),
+      .groups = "drop"
+    ) |>
+    dplyr::select(Region_Plot, proportionNonNeutral, proportionLFHA, proportionHFLA)
+}
+
+#' Generate replicate equal-effort random subsamples of `subsample_size` plots per region (H2b)
+make_regional_plot_subsamples <- function(comm, n_subsamples = N_SUBSAMPLES,
+                                          subsample_size = SUBSAMPLE_SIZE) {
+  plots <- comm |>
+    dplyr::group_by(Region, Region_Plot) |>
+    dplyr::summarise(value = dplyr::n(), .groups = "drop")
+
+  purrr::map(seq_len(n_subsamples), function(i) {
+    set.seed(i)
+    plots |>
+      dplyr::group_by(Region) |>
+      dplyr::sample_n(subsample_size) |>
+      dplyr::ungroup() |>
+      dplyr::pull(Region_Plot)
+  })
+}
+
+#' Split a vector of plot IDs into non-overlapping consecutive sets of `size` (incomplete tail dropped)
+split_into_plot_sets <- function(plot_ids, size = SUBGROUP_SIZE) {
+  sets <- split(plot_ids, ceiling(seq_along(plot_ids) / size))
+  sets[lengths(sets) == size]
+}
+
+#' Generate non-overlapping sets of `subgroup_size` plots ordered by forest cover within region (H2c)
+make_ordered_forest_cover_subgroups <- function(comm, env, subgroup_size = SUBGROUP_SIZE) {
+  plots <- comm |>
+    dplyr::group_by(Region, Region_Plot) |>
+    dplyr::summarise(value = dplyr::n(), .groups = "drop")
+
+  ordered_sets <- list()
+  for (region in c("Balbina", "PGM", "STM")) {
+    ordered_ids <- env |>
+      dplyr::filter(Region_Plot %in% plots$Region_Plot, Region == region) |>
+      dplyr::arrange(fc2000) |>
+      dplyr::pull(Region_Plot)
+    ordered_sets[[region]] <- split_into_plot_sets(ordered_ids, size = subgroup_size)
+  }
+  # Intact Jurua has no forest-cover gradient; sets follow plot ID order
+  ordered_sets[["Jurua"]] <- split_into_plot_sets(
+    dplyr::filter(plots, Region == "Jurua")$Region_Plot,
+    size = subgroup_size
+  )
+  unlist(ordered_sets, recursive = FALSE)
+}
+
+#' Fit sncm_fit() across a named list of plot-ID vectors using the same underlying model routine
+fit_sloan_over_plot_sets <- function(comm, plot_sets) {
+  purrr::map(plot_sets, \(ids) sncm_fit(build_community_matrix(comm, ids)))
+}
+
+#' Region-level summary of replicate neutral-model fits and paired differences from reference region
+summarise_regional_sloan_r2 <- function(sloan_stats, regions = REGIONS, ref_region = "Jurua") {
+  q025 <- \(x) unname(stats::quantile(x, 0.025))
+  q975 <- \(x) unname(stats::quantile(x, 0.975))
+  ref_df <- sloan_stats |>
+    dplyr::filter(region == ref_region) |>
+    dplyr::select(seed, r2pois_ref = r2pois)
+
+  sloan_stats |>
+    dplyr::left_join(ref_df, by = "seed") |>
+    dplyr::mutate(diff_from_jurua = r2pois - r2pois_ref) |>
+    dplyr::group_by(region) |>
+    dplyr::summarise(
+      n_subsamples                = dplyr::n(),
+      r2pois_mean                 = mean(r2pois),
+      r2pois_q025                 = q025(r2pois),
+      r2pois_q975                 = q975(r2pois),
+      diff_from_jurua_mean        = mean(diff_from_jurua),
+      diff_from_jurua_q025        = q025(diff_from_jurua),
+      diff_from_jurua_q975        = q975(diff_from_jurua),
+      prop_subsamples_below_jurua = mean(diff_from_jurua < 0),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(factor(region, levels = regions))
+}
+
+#' Average species-level relative abundance, occurrence frequency, and Poisson prediction across replicates
+summarise_regional_average_sloan <- function(vals_long, nn_long) {
+  vals_long |>
+    dplyr::group_by(Region = region, sp) |>
+    dplyr::summarise(
+      n_reps    = dplyr::n(),
+      p         = mean(p),
+      freq      = mean(freq),
+      pois.pred = mean(pois.pred),
+      pois.lwr  = mean(pois.lwr),
+      pois.upr  = mean(pois.upr),
+      .groups   = "drop"
+    ) |>
+    dplyr::left_join(dplyr::rename(nn_long, sp = Binomial_correct), by = c("Region", "sp")) |>
+    dplyr::mutate(Neutrality = tidyr::replace_na(Neutrality, "Neutral"))
+}
+
+#' Standardize traits within each regional species pool and test non-neutral taxa against 0
+compute_nonneutral_trait_tests <- function(comm, traits, non_neutrals,
+                                           trait_names = c("WD", "lnSM", "LMA", "Hmax"),
+                                           regions = REGIONS) {
+  pool_z <- comm |>
+    dplyr::distinct(Region, Binomial_correct) |>
+    dplyr::left_join(
+      dplyr::select(traits, Binomial_correct, dplyr::all_of(trait_names)),
+      by = "Binomial_correct",
+      relationship = "many-to-one"
+    ) |>
+    tidyr::pivot_longer(dplyr::all_of(trait_names), names_to = "TraitName", values_to = "value") |>
+    dplyr::group_by(Region, TraitName) |>
+    dplyr::mutate(TraitScore = (value - mean(value, na.rm = TRUE)) / stats::sd(value, na.rm = TRUE)) |>
+    dplyr::ungroup()
+
+  nn_long <- non_neutrals |>
+    tidyr::pivot_longer(dplyr::all_of(regions), names_to = "Region", values_to = "NeutralScore") |>
+    dplyr::filter(NeutralScore == 1) |>
+    dplyr::select(Region, Binomial_correct = sp)
+
+  z_scores <- dplyr::inner_join(
+    nn_long, pool_z,
+    by = c("Region", "Binomial_correct"),
+    relationship = "one-to-many"
+  ) |>
+    dplyr::rename(RegionNeutral = Region)
+
+  safe_p <- function(test) tryCatch(test$p.value, error = function(e) NA_real_)
+  tests <- z_scores |>
+    dplyr::group_by(TraitName, RegionNeutral) |>
+    dplyr::summarise(
+      n_taxa   = dplyr::n_distinct(Binomial_correct),
+      n        = sum(!is.na(TraitScore)),
+      mean     = mean(TraitScore, na.rm = TRUE),
+      sd       = stats::sd(TraitScore, na.rm = TRUE),
+      t_test_p = if (n >= 2) safe_p(stats::t.test(TraitScore, mu = 0)) else NA_real_,
+      wilcox_p = if (n >= 1) safe_p(stats::wilcox.test(TraitScore, mu = 0, exact = FALSE)) else NA_real_,
+      .groups  = "drop"
+    ) |>
+    dplyr::group_by(TraitName) |>
+    dplyr::mutate(
+      t_p_adj = stats::p.adjust(t_test_p, method = "BH"),
+      w_p_adj = stats::p.adjust(wilcox_p, method = "BH")
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      sig = dplyr::case_when(
+        is.na(t_p_adj)  ~ "",
+        t_p_adj < 0.001 ~ "***",
+        t_p_adj < 0.01  ~ "**",
+        t_p_adj < 0.05  ~ "*",
+        TRUE            ~ ""
+      )
+    ) |>
+    dplyr::arrange(TraitName, RegionNeutral)
+
+  list(z_scores = z_scores, tests = tests)
 }

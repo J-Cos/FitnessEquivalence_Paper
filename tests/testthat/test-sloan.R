@@ -47,11 +47,15 @@ test_that("non-neutral classification requires the same class in every replicate
   expect_equal(unname(unlist(nn$wide[1, REGIONS])), c(0, 1, 0, 1))
 })
 
-test_that("non-neutral proportions do not duplicate stems of taxa non-neutral in several regions", {
-  nn_long <- tibble(Region = c("PGM", "Jurua"), Binomial_correct = c("a", "a"), Neutrality = "HFLA")
+test_that("non-neutral proportions do not duplicate stems and partition cleanly into LFHA + HFLA", {
+  nn_long <- tibble(Region = c("PGM", "PGM", "Jurua"),
+                    Binomial_correct = c("a", "c", "a"),
+                    Neutrality = c("HFLA", "LFHA", "HFLA"))
   prop <- nonneutral_proportions(toy_comm, nn_long)
   expect_equal(nrow(prop), n_distinct(toy_comm$Region_Plot))
-  expect_equal(prop$proportionNonNeutral[prop$Region_Plot == "P1"], 1 / 3)
+  expect_equal(prop$proportionHFLA[prop$Region_Plot == "P1"], 1 / 3)
+  expect_equal(prop$proportionLFHA[prop$Region_Plot == "P1"], 2 / 3)
+  expect_equal(prop$proportionNonNeutral, prop$proportionLFHA + prop$proportionHFLA)
   expect_equal(prop$proportionNonNeutral[prop$Region_Plot == "J1"], 1 / 3)
   expect_equal(prop$proportionNonNeutral[prop$Region_Plot == "S1"], 0)   # 'a' not non-neutral in STM
 })
@@ -61,4 +65,48 @@ test_that("community matrix has plots as rows and stem counts as entries", {
   expect_equal(sort(rownames(m)), c("J1", "P1"))
   expect_equal(sum(m), 6)
   expect_equal(unname(m["J1", "b"]), 2)
+})
+
+test_that("ordered subgroup builder orders by fc2000 and drops incomplete trailing sets", {
+  sub_comm <- tibble(
+    Region = rep(c("PGM", "Jurua"), each = 3),
+    Region_Plot = c("P1", "P2", "P3", "J1", "J2", "J3"),
+    Binomial_correct = "a"
+  )
+  sub_env <- tibble(Region = "PGM", Region_Plot = c("P1", "P2", "P3"), fc2000 = c(0.9, 0.2, 0.5))
+  sets <- make_ordered_forest_cover_subgroups(sub_comm, sub_env, subgroup_size = 2)
+  expect_equal(sets[["PGM.1"]], c("P2", "P3"))
+  expect_equal(sets[["Jurua.1"]], c("J1", "J2"))
+  expect_equal(length(sets), 2)
+})
+
+test_that("regional Sloan R2 and average species fit summaries aggregate replicates accurately", {
+  stats_df <- tibble(
+    seed   = rep(1:3, each = 4),
+    region = rep(REGIONS, times = 3),
+    r2pois = c(0.82, 0.76, 0.74, 0.70,
+               0.80, 0.75, 0.72, 0.68,
+               0.84, 0.77, 0.73, 0.69)
+  )
+  r2_sum <- summarise_regional_sloan_r2(stats_df)
+  expect_equal(as.character(r2_sum$region), REGIONS)
+  expect_equal(r2_sum$diff_from_jurua_mean[r2_sum$region == "Jurua"], 0)
+  expect_equal(r2_sum$prop_subsamples_below_jurua[r2_sum$region == "PGM"], 1)
+
+  vals_long <- tibble(
+    region    = c("PGM", "PGM", "PGM"),
+    seed      = c(1, 2, 1),
+    sp        = c("spA", "spA", "spB"),
+    p         = c(0.02, 0.04, 0.01),
+    freq      = c(0.10, 0.20, 0.25),
+    pois.pred = c(0.45, 0.55, 0.24),
+    pois.lwr  = c(0.30, 0.40, 0.12),
+    pois.upr  = c(0.60, 0.70, 0.38)
+  )
+  nn_long <- tibble(Region = "PGM", Binomial_correct = "spA", Neutrality = "LFHA")
+  avg_fit <- summarise_regional_average_sloan(vals_long, nn_long)
+  expect_equal(nrow(avg_fit), 2)
+  expect_equal(avg_fit$p[avg_fit$sp == "spA"], 0.03)
+  expect_equal(avg_fit$Neutrality[avg_fit$sp == "spA"], "LFHA")
+  expect_equal(avg_fit$Neutrality[avg_fit$sp == "spB"], "Neutral")
 })

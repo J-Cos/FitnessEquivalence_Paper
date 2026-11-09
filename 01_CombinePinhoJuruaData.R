@@ -7,42 +7,15 @@
 
 suppressMessages(library(tidyverse))
 source("Code/Functions/config.R"); check_project_root()
+source("Code/Functions/data_prep.R")
 
-# Pairs of names differing by exactly n characters (same length; Hamming distance) -------------
-hamming_distance <- function(a, b) {
-  if (nchar(a) != nchar(b)) return(Inf)
-  sum(strsplit(a, "")[[1]] != strsplit(b, "")[[1]])
-}
-strings_with_n_diff <- function(vec, n) {
-  combs <- expand.grid(a = vec, b = vec, stringsAsFactors = FALSE) |> filter(a != b)
-  combs$dist <- mapply(hamming_distance, combs$a, combs$b)
-  unique(unlist(combs[combs$dist == n, c("a", "b")]))
-}
-
-# Typos identified by inspecting near-identical names (see interactive checks below)
-NAME_FIXES <- c("Copaifera guyanensis" = "Copaifera guianensis",
-                "Licaria macrophylla"  = "Licania macrophylla",
-                "Licaria rodriguesii"  = "Licania rodriguesii")
-fix_names <- function(x) {
-  x <- str_trim(x)
-  hit <- x %in% names(NAME_FIXES)
-  x[hit] <- NAME_FIXES[x[hit]]
-  x
-}
-
-# Load data ------------------------------------------------------------------------------------
-jurua  <- read_required_csv("Data/Jurua_Flora_FullDB.csv") |> filter(DBH >= 10)
-pinho  <- read_required_csv("Data/comm.csv") |> filter(Region %in% c("Balbina", "PGM", "STM"))
+# Load raw datasets ----------------------------------------------------------------------------
+jurua  <- read_required_csv("Data/Jurua_Flora_FullDB.csv")
+pinho  <- read_required_csv("Data/comm.csv")
 traits <- read_required_csv("Data/traits.csv")
 
 # Community (stems) ----------------------------------------------------------------------------
-comm_new <- bind_rows(
-  pinho |> select(X, Region, Region_Plot, Binomial_correct, Genus, family, DBH),
-  jurua |>
-    transmute(X = NA, Region = "Jurua", Region_Plot = parcel, Binomial_correct = species,
-              Genus = genus, family, DBH)
-) |>
-  mutate(X = row_number(), Binomial_correct = fix_names(Binomial_correct))
+comm_new <- harmonise_stem_data(pinho, jurua, dbh_min = DBH_MIN_CM)
 
 if (interactive()) {
   print(table(comm_new$Region)); print(table(comm_new$Region_Plot))
@@ -56,17 +29,10 @@ if (interactive()) {
 write.csv(comm_new, out_path("comm"), row.names = FALSE)
 
 # Traits (taxa) --------------------------------------------------------------------------------
-# Jurua traits: Hmax and dispersal syndrome (DS) are not recorded in the Jurua database
-jurua_traits <- jurua |>
-  transmute(Binomial_correct = fix_names(species), WD, lnSM = log(SM), LMA, Hmax = NA, DS = NA)
-
-# Jurua taxa absent from the Pinho trait table; replicated records are summarised by the median
-traits_needed <- jurua_traits |>
-  filter(!Binomial_correct %in% traits$Binomial_correct) |>
-  group_by(Binomial_correct) |>
-  summarise(across(everything(), median))
-
 if (interactive()) {
+  jurua_traits <- jurua |>
+    filter(DBH >= DBH_MIN_CM) |>
+    transmute(Binomial_correct = fix_taxon_names(species), WD, lnSM = log(SM), LMA)
   # taxa lacking seed mass, and taxa with non-identical replicate trait records
   jurua_traits |> filter(!Binomial_correct %in% traits$Binomial_correct) |>
     group_by(Binomial_correct) |> summarise(across(everything(), mean)) |>
@@ -76,10 +42,7 @@ if (interactive()) {
     filter(!WD == 0 | !lnSM == 0 | !LMA == 0) |> print(n = 999)
 }
 
-# Remove an erroneous imputed trait row for a misspelt taxon in the Pinho table, then combine
-traits_new <- traits |>
-  filter(Binomial_correct != "Licaria rodriguesii") |>
-  bind_rows(traits_needed)
+traits_new <- harmonise_trait_table(traits, jurua, dbh_min = DBH_MIN_CM)
 stopifnot(!anyDuplicated(traits_new$Binomial_correct),
           all(unique(comm_new$Binomial_correct) %in% traits_new$Binomial_correct))
 write.csv(traits_new, out_path("traits"), row.names = FALSE)
