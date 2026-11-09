@@ -1,6 +1,6 @@
 # Fitness equivalence and deviations from the Ecological Equation of State
 
-Code for *Stressor-induced reductions in tree fitness equivalence explain systematic deviations from
+Code for *Disturbance-induced reductions in tree fitness equivalence explain systematic deviations from
 macroecological theory*, submitted to *Journal of Ecology*.
 
 The pipeline computes plot macrostates (`S`, `N`, `E`, `B`) for 224 Amazonian forest plots using stem basal

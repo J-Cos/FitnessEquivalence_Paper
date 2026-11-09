@@ -7,45 +7,6 @@
 #                       07_FitSubgroupSloans.R; 09_FitMediationSEMs.R
 # Output: Figures/Figure_H2_SEMs.png (Fig. 3);
 #         Figures/Figure_H2_SEMs_absolutesupplement.png (SI Appendix, Fig. S7)
-#
-# Suggested Caption (PNAS style) for Figure_H2_SEMs.png (Fig. 3):
-#   Reductions in tree fitness equivalence partially mediate disturbance-driven deviations from the
-#   Ecological Equation of State (EEoS) across 224 0.25-ha Amazonian forest plots spanning four
-#   regions (Jurua, n = 30; Balbina, n = 37; Santarem [STM], n = 63; Paragominas [PGM], n = 94).
-#   Rows correspond to three complementary metrics of reduced fitness equivalence: CATS Model Fit
-#   (A-C; Negative Binomial Community Assembly via Trait Selection deviance R^2, n = 224 plots),
-#   Non-neutral Abundance (D-F; proportion of trees belonging to regionally non-neutral taxa,
-#   n = 224 plots), and Neutral Model Fit (G-I; Poisson neutral occurrence-frequency R^2 across
-#   n = 43 non-overlapping five-plot disturbance-ordered subgroups).
-#   (A, D, and G) Signed EEoS deviation [ln(B / B_pred); plot level in A and D, subgroup median
-#   in G; horizontal dotted lines mark exact EEoS agreement at zero] versus each fitness-equivalence
-#   metric (the horizontal axis in G is reversed so that reduced fitness equivalence increases from
-#   left to right across all three rows). Solid black lines and grey ribbons show marginal common-
-#   slope ordinary least-squares predictions and 95% confidence intervals controlling for regional
-#   fixed effects.
-#   (B, E, and H) Multimodel-averaged causal mediation diagrams evaluated across the complete,
-#   balanced eight-model candidate set spanning all inclusion/exclusion combinations of paths a
-#   (stressor -> mediator), b (mediator -> EEoS deviation), and c (direct stressor -> EEoS
-#   deviation), controlling for regional fixed effects on endogenous nodes (Garrido et al. 2022
-#   MSA-SEM framework). Edge labels report full-set AICc Akaike-weighted standardized path
-#   coefficients (beta +/- unconditional SE) and path relative importance (RI, sum of Akaike
-#   weights across the four candidate models containing each path; solid black arrows denote
-#   supported paths with RI >= 0.70, dashed grey arrows denote RI < 0.70, and arrow thickness
-#   scales linearly with |beta|). Shaded endogenous node boxes report Akaike-weighted explained
-#   variance (R^2), and each diagram lists the Akaike-weighted comparative fit index (Weighted CFI).
-#   (C, F, and I) Partitioning of the full-set model-averaged total disturbance effect on EEoS
-#   deviation into mediated (indirect, |a x b| / [|a x b| + |c|]; dark charcoal) and direct
-#   (|c| / [|a x b| + |c|]; light grey) proportions (see SI Appendix, Fig. S7 for the corresponding
-#   absolute EEoS deviation and subgroup RMSE analyses).
-#
-# Suggested Caption (PNAS style) for Figure_H2_SEMs_absolutesupplement.png (Fig. S7):
-#   Causal mediation of unsigned EEoS deviations by reductions in tree fitness equivalence across
-#   CATS Model Fit (A-C, n = 224 plots), Non-neutral Abundance (D-F, n = 224 plots), and Neutral
-#   Model Fit (G-I, n = 43 five-plot subgroups). Layout, regional colors, marginal common-slope
-#   ordinary least-squares regressions (A, D, and G), eight-model Garrido et al. (2022) multimodel-
-#   averaged SEM diagrams (B, E, and H), and mediated-versus-direct effect proportions (C, F, and I)
-#   follow Fig. 3, replacing signed deviation with plot-level absolute deviation, |ln(B / B_pred)|,
-#   in A-F and five-plot root-mean-square deviation, RMSE = sqrt(mean[ln(B / B_pred)^2]), in G-I.
 # ---------------------------------------------------
 
 suppressMessages({

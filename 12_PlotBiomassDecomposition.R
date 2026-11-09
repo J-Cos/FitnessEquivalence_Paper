@@ -8,31 +8,6 @@
 # Input Origin Scripts: 03_FitEEOS.py; 05_FitCatsRegressions.R; 06_FitRegionalSloanNonNeutral.R;
 #                       07_FitSubgroupSloans.R; 11_FitBiomassDecomposition.R
 # Output: Figures/Figure_BiomassDecomposition.png (Fig. 4)
-#
-# Suggested Caption (PNAS style) for Figure_BiomassDecomposition.png (Fig. 4):
-#   Exact three-run BIOMASS decomposition reveals that disturbance-driven and fitness-equivalence-
-#   mediated deviations from the Ecological Equation of State (EEoS) operate overwhelmingly through
-#   functional wood-density turnover rather than departure from MaxEnt size-structure predictions.
-#   Every plot's signed EEoS deviation [Total deviation, ln(B / B_pred); solid black lines and
-#   squares] decomposes identically via the telescoping log-ratio
-#   ln(B / B_pred) = ln(B / B_rho) + ln(B_rho / B_size) + ln(B_size / B_pred) into Wood density
-#   [w_rho = ln(B / B_rho); long-dashed dark-grey lines and circles], Pure size structure
-#   [r_size = ln(B_size / B_pred); dot-dashed medium-grey lines and triangles], and Site height
-#   [w_H = ln(B_rho / B_size); short-dashed light-grey lines and diamonds]. (A) Region-adjusted
-#   marginal common-slope trajectories and 95% confidence ribbons across disturbed forest cover
-#   within a 2,000-m radius (n = 224 plots; horizontal dotted line marks zero), showing Wood
-#   density declining in parallel with Total deviation while Pure size structure and Site height
-#   remain flat. (B) Exact additive disturbance slopes (beta +/- 95% CI from Y ~ disturbedcover +
-#   Region; percentages denote each channel's share of the total H1 slope, -0.142 = -0.125 - 0.004
-#   - 0.013). (C and D) Multimodel-averaged standardized mediator -> channel path coefficients
-#   (C; b +/- unconditional SE, with Neutral Model Fit R^2 sign-reversed so reduced fitness
-#   equivalence aligns across rows) and unstandardized log-biomass mediated indirect effects
-#   (D; a x b +/- unconditional SE, preserving common additive log-biomass channel units) evaluated
-#   across the balanced eight-model Garrido et al. (2022) candidate set for four-trait Negative
-#   Binomial CATS (CATS Model Fit), wood-density-excluded CATS [CATS (no WD): lnSM + LMA + Hmax
-#   non-circularity check], proportion of non-neutral trees (Non-neutral Abundance), and five-plot
-#   subgroup neutral model R^2 (Neutral Model Fit). In C and D, filled symbols denote supported
-#   paths or indirect effects with relative importance RI >= 0.70 and open symbols denote RI < 0.70.
 # ---------------------------------------------------
 
 suppressMessages({

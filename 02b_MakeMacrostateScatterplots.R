@@ -6,21 +6,6 @@
 # Input Origin Scripts: 02_GetEcosystemMacrostates.R
 # Output: Figures/FigureS1.png (SI Appendix, Fig. S1);
 #         Figures/Figure_BiomassCV.png (SI Appendix, Fig. S2)
-#
-# Suggested Caption (PNAS style) for FigureS1.png (Fig. S1):
-#   Pairwise relationships among the four ecosystem macrostate variables across the 224 0.25-ha
-#   Amazonian forest plots (Jurua, n = 30; Balbina, n = 37; Santarem [STM], n = 63; Paragominas
-#   [PGM], n = 94): stem abundance (N), species richness (S), dimensionless aboveground biomass
-#   (B = sum_i AGB_i / AGB_ref), and dimensionless total metabolic rate (E = sum_i [DBH_i / 10]^2),
-#   normalized to a 10-cm DBH reference stem at study-mean wood density and bioclimatic stress.
-#
-# Suggested Caption (PNAS style) for Figure_BiomassCV.png (Fig. S2):
-#   Plot-level allometric biomass coefficient of variation (Biomass Monte Carlo CV, SD / mean across
-#   1,000 BIOMASS::AGBmonteCarlo draws propagating taxonomic wood-density, bioclimatic height-
-#   allometry, and Chave et al. 2014 regression error; n = 224 plots) plotted against (A)
-#   dimensionless biomass (B), (B) stem abundance (N), (C) dimensionless metabolic rate (E), and
-#   (D) study region (boxes: median and interquartile range [IQR]; whiskers: 1.5 x IQR; points:
-#   individual plots, providing the regional color key for A-C).
 # ---------------------------------------------------
 
 suppressMessages({

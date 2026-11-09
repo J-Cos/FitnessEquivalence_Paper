@@ -9,32 +9,6 @@
 #         Figures/Figure_H1.png (Fig. 1);
 #         Figures/Figure_H1_absolutesupplement.png (SI Appendix, Fig. S3);
 #         Figures/diagnostics/
-#
-# Suggested Caption (PNAS style) for Figure_H1.png (Fig. 1):
-#   Landscape forest loss drives systematic negative deviations from the Ecological Equation of
-#   State (EEoS) across 224 0.25-ha Amazonian forest plots (stems >= 10 cm DBH). (A) Study regions
-#   across the Tropical and Subtropical Moist Broadleaf Forests biome (grey shading; Dinerstein et
-#   al., 2017); solid circles mark regional centroids and plot counts in intact Jurua (n = 30),
-#   Balbina (n = 37), Santarem (STM; n = 63), and Paragominas (PGM; n = 94). (B) Observed versus
-#   zero-parameter METE/EEoS-predicted dimensionless plot biomass in natural-log units [ln(B) vs.
-#   ln(B_pred); dotted 1:1 line; vertical bars show +/- 1 sigma_allom log-scale uncertainty across
-#   1,000 BIOMASS Monte Carlo draws]. (C) Signed EEoS deviation, ln(B / B_pred), versus disturbed
-#   forest cover within a 2,000-m radius (proportion of non-forest cover, 1 - fc2000; intact Jurua
-#   fixed at 0; horizontal dotted line marks exact EEoS agreement at zero). The solid black line and
-#   grey ribbon show the marginal common-slope ordinary least-squares prediction and 95% confidence
-#   interval controlling for regional fixed effects (holding regional composition at sample
-#   proportions). (D) Regional distributions of signed EEoS deviation (boxes: median and
-#   interquartile range [IQR]; whiskers: 1.5 x IQR; points: individual plots), providing the
-#   regional color key across panels (see SI Appendix, Fig. S3 for the corresponding absolute
-#   deviation analysis).
-#
-# Suggested Caption (PNAS style) for Figure_H1_absolutesupplement.png (Fig. S3):
-#   Unsigned (absolute) EEoS deviation, |ln(B / B_pred)|, across landscape disturbance and regions
-#   (n = 224 plots). (A) Absolute EEoS deviation versus disturbed forest cover within a 2,000-m
-#   radius (solid black line and grey ribbon: marginal common-slope ordinary least-squares
-#   prediction and 95% confidence interval controlling for regional fixed effects). (B) Regional
-#   distributions of absolute EEoS deviation (boxes: median and IQR; whiskers: 1.5 x IQR; points:
-#   individual plots), providing the color key for A.
 # ---------------------------------------------------
 
 suppressMessages({library(tidyverse); library(lmtest); library(sandwich)})
