@@ -259,15 +259,19 @@ save_figure <- function(stem, plot, ..., dpi = 600, bg = "white") {
 }
 
 #' Regional map of plot locations (Figure 1A)
-make_region_map <- function(env_file = "Data/env.csv", eco_shp = "Data/Ecoregions2017/Ecoregions2017.shp") {
+make_region_map <- function(env_file = out_path("env"), eco_shp = "Data/Ecoregions2017/Ecoregions2017.shp") {
   summary_df <- read_required_csv(env_file) |>
     dplyr::filter(Biome == "Amazonia") |>
     dplyr::group_by(Region) |>
     dplyr::summarise(n = dplyr::n(), lon = mean(X, na.rm = TRUE), lat = mean(Y, na.rm = TRUE),
-                     fc2000_mean = mean(fc2000, na.rm = TRUE), .groups = "drop") |>
+                     fc2000_mean = mean(fc2000, na.rm = TRUE), .groups = "drop")
+  if (!"Jurua" %in% summary_df$Region) {
+    summary_df <- summary_df |>
+      tibble::add_row(Region = "Jurua", n = JURUA_CENTROID$n, lon = JURUA_CENTROID$lon,
+                      lat = JURUA_CENTROID$lat, fc2000_mean = 1)
+  }
+  summary_df <- summary_df |>
     dplyr::arrange(dplyr::desc(fc2000_mean)) |>
-    tibble::add_row(Region = "Jurua", n = JURUA_CENTROID$n, lon = JURUA_CENTROID$lon,
-                    lat = JURUA_CENTROID$lat, fc2000_mean = 1) |>
     dplyr::mutate(Region = factor(Region, levels = REGIONS))
 
   south_america <- terra::vect(rnaturalearth::ne_countries(continent = "South America", returnclass = "sf"))

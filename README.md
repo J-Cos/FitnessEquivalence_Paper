@@ -1,6 +1,6 @@
 # Fitness equivalence and deviations from the Ecological Equation of State
 
-Code for *Disturbance-induced reductions in tree fitness equivalence explain systematic deviations from
+Code for *Disturbance-induced reductions in tree fitness equivalence partly explain systematic deviations from
 macroecological theory*, submitted to *Journal of Ecology*.
 
 The pipeline computes plot macrostates (`S`, `N`, `E`, `B`) for 224 Amazonian forest plots using stem basal
@@ -57,7 +57,8 @@ Place the following in `Data/`. All are publicly available from the sources cite
 | `comm.csv` | Pinho et al. stems (Balbina, PGM, STM): `Region`, `Region_Plot`, `Binomial_correct`, `Genus`, `family`, `DBH` (cm) |
 | `traits.csv` | Pinho et al. species traits: `Binomial_correct`, `WD`, `lnSM`, `LMA`, `Hmax`, `DS` |
 | `Jurua_Flora_FullDB.csv` | Scabin et al. Juruá stems and traits (`parcel`, `species`, `genus`, `family`, `DBH`, `WD`, `SM`, `LMA`) |
-| `env.csv` | Plot environment incl. coordinates (`X`, `Y`) and forest cover in a 2 km radius (`fc2000`). Juruá plots are absent (intact forest; forest cover set to 1, coordinates set to the regional centroid in `Functions/config.R`). |
+| `Jurua_Plot_Locations.csv` | Scabin et al. Juruá plot coordinates (`Region_Plot`, `Site_name`, `X`, `Y`) |
+| `env.csv` | Pinho et al. plot environment incl. coordinates (`X`, `Y`) and forest cover in a 2 km radius (`fc2000`); combined with `Jurua_Plot_Locations.csv` (`fc2000 = 1`) into `Outputs/env.csv` by step `01` |
 | `Ecoregions2017/` | Ecoregions 2017 shapefile (map in Figure 1A) |
 | `Harte2022_data_statevariables.csv` | Harte et al. (2022) empirical state-variable benchmark dataset (used by `pytest`) |
 
@@ -73,19 +74,19 @@ package versions are written to `Outputs/logs/`.
 
 | Step | Script | Main outputs (`Outputs/` & `Figures/`) | Manuscript item |
 | :--- | :--- | :--- | :--- |
-| 01 | `01_CombinePinhoJuruaData.R` | `comm.csv`, `traits.csv` | Data harmonisation |
+| 01 | `01_CombinePinhoJuruaData.R` | `comm.csv`, `traits.csv`, `env.csv` | Data harmonisation |
 | 02 | `02_GetEcosystemMacrostates.R` | `Macrostates.csv` (`S`, `N`, `E`, `B`, 3-run `BIOMASS` totals `B_rho`, `B_size`, and Monte Carlo `B_cv`) | Macrostate methods |
 | 02b | `02b_MakeMacrostateScatterplots.R` | `FigureS1.png`, `Figure_BiomassCV.png` | Figs. S1–S2 |
 | 03 | `03_FitEEOS.py` | `EEOSPreds.csv` (`B_pred`, `dev`, `absdev`, `w_rho`, `w_H`, `r_size`, METE constraint checks) | Exact METE EEoS solver |
-| 04 | `04_FitSimpleEeosDevRegression.R` | `H1_Signed_*` (primary), `H1_Absolute_*` (retained), `H1_AllometricBenchmark.csv`; `Figure_H1.png`, `Figure_H1_absolutesupplement.png`, `Figures/diagnostics/H1_*_QQ.png` | H1; Fig. 1, Fig. S3 |
+| 04 | `04_FitSimpleEeosDevRegression.R` | `H1_Signed_*` (primary), `H1_Absolute_*` (retained), `H1_AllometricBenchmark.csv`; `Figure_H1.png`, `Figure_H1_absolutesupplement.png`, `Figures/diagnostics/H1_*_QQ.png` | H1; Fig. 1, Fig. S3, Table S1 |
 | 05 | `05_FitCatsRegressions.R` | `CatsOutput.csv`, `CatsSpeciesPredictions.RDS` | H2a fitness-equivalence metric |
-| 06 | `06_FitRegionalSloanNonNeutral.R` | `PlotSubsets.RDS`, `SloanOutput.RDS`, `SloanExampleFits.RDS`, `SloanR2_ByRegion.csv`, `SloanRegionalAverageFit.csv`, `NonNeutralTaxa*.csv`, `NonNeutralProportions.csv`, `NonNeutralTraitTests.csv`, `NonNeutralTraitZScores.csv` | H2b metric & trait departures; Table S1 |
+| 06 | `06_FitRegionalSloanNonNeutral.R` | `PlotSubsets.RDS`, `SloanOutput.RDS`, `SloanExampleFits.RDS`, `SloanR2_ByRegion.csv`, `SloanRegionalAverageFit.csv`, `NonNeutralTaxa*.csv`, `NonNeutralProportions.csv`, `NonNeutralTraitTests.csv`, `NonNeutralTraitZScores.csv` | H2b metric & trait departures; Table S2 |
 | 07 | `07_FitSubgroupSloans.R` | `NonOverlappingOrderedPlotSubsets.RDS`, `ForestCoverSubgroupSloanObjects.RDS`, `ForestCoverSubgroupSloanFits.csv` | H2c subgroup neutral-fit metric |
 | 08 | `08_PlotFitnessEquivalenceMeasures.R` | `Figure_FitnessEquivalence.png`, `Figure_RegionalSloan_supplement.png`, `Figure_traitsOfNonneutrals.png`, `Figure_sloansubsets_supplement.png` | Fig. 2, Figs. S4–S6 |
-| 09 | `09_FitMediationSEMs.R` | `H2{a,b,c}_{Signed,Absolute}_*.csv`, `H2a_{3trait_*,Poisson_*}_*.csv`, `H2_Mediation_Summary.csv` | H2a–c Garrido 8-model MSA-SEMs |
+| 09 | `09_FitMediationSEMs.R` | `H2{a,b,c}_{Signed,Absolute}_*.csv`, `H2a_{3trait_*,Poisson_*}_*.csv`, `H2_Mediation_Summary.csv` | H2a–c Garrido 8-model MSA-SEMs; Table S3 |
 | 10 | `10_PlotMediationSEMs.R` | `Figure_H2_SEMs.png`, `Figure_H2_SEMs_absolutesupplement.png` | Fig. 3, Fig. S7 |
 | 11 | `11_FitBiomassDecomposition.R` | `BiomassDecomposition_{NoWD_Cats,OLS,SEM_Summary,SEM_MMI}.csv` | 3-run channel decomposition & WD-free CATS check |
-| 12 | `12_PlotBiomassDecomposition.R` | `Figure_BiomassDecomposition.png` | Fig. 4 |
+| 12 | `12_PlotBiomassDecomposition.R` | `Figure_BiomassDecomposition.png` | Fig. SB1 |
 
 ### Macrostate formulation and exact 3-run `BIOMASS` decomposition
 

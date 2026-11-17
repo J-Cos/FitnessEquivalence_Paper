@@ -8,6 +8,7 @@ test_that("harmonised stem and trait tables (01) and macrostate / EEoS predictio
 
   comm   <- read.csv(out("comm.csv"))
   traits <- read.csv(out("traits.csv"))
+  env    <- read.csv(out("env.csv"))
   macros <- read.csv(out("Macrostates.csv"))
   preds  <- read.csv(out("EEOSPreds.csv"))
 
@@ -15,6 +16,9 @@ test_that("harmonised stem and trait tables (01) and macrostate / EEoS predictio
   expect_true(all(comm$DBH >= DBH_MIN_CM))
   expect_equal(anyDuplicated(traits$Binomial_correct), 0L)
   expect_true(all(unique(comm$Binomial_correct) %in% traits$Binomial_correct))
+  expect_equal(nrow(env), 224)
+  expect_equal(anyDuplicated(env$Region_Plot), 0L)
+  expect_true(all(is.finite(env$X) & is.finite(env$Y)))
 
   expect_equal(nrow(macros), 224)
   expect_equal(nrow(preds), 224)

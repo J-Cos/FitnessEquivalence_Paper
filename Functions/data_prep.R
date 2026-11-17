@@ -89,11 +89,35 @@ harmonise_trait_table <- function(pinho_traits, jurua, dbh_min = DBH_MIN_CM) {
   traits_new
 }
 
+#' Merge Pinho Amazonian plot environmental table with Jurua plot coordinates
+harmonise_env_table <- function(pinho_env, jurua_coords) {
+  jurua_env <- jurua_coords |>
+    dplyr::transmute(
+      Biome       = "Amazonia",
+      Region      = "Jurua",
+      Region_Plot = stringr::str_trim(Region_Plot),
+      X           = as.numeric(X),
+      Y           = as.numeric(Y),
+      PlotSize    = 0.25,
+      fc2000      = 1.0
+    )
+  env_new <- pinho_env |>
+    dplyr::filter(Biome == "Amazonia") |>
+    dplyr::bind_rows(jurua_env)
+  if (anyDuplicated(env_new$Region_Plot)) {
+    stop("Duplicate Region_Plot in harmonised env table.")
+  }
+  if (any(!is.finite(env_new$X) | !is.finite(env_new$Y))) {
+    stop("Missing or non-finite coordinates (X, Y) in harmonised env table.")
+  }
+  env_new
+}
+
 #' Plot-level table for H1 / H2a / H2b and the channel decomposition
 #' @param need which fitness-equivalence metrics must be joined: "cats", "nonneutral"
 load_and_prepare_plot_data <- function(need = character(0),
                                        preds_file = out_path("EEOSPreds"),
-                                       env_file = "Data/env.csv",
+                                       env_file = out_path("env"),
                                        cats_file = out_path("CatsOutput"),
                                        non_neutral_file = out_path("NonNeutralProportions")) {
   preds <- read_required_csv(preds_file)
@@ -169,7 +193,7 @@ summarise_subgroup_eeos <- function(subsets, preds, env) {
 load_and_prepare_subgroup_data <- function(fits_file = out_path("ForestCoverSubgroupSloanFits"),
                                            subsets_file = out_path("NonOverlappingOrderedPlotSubsets", ext = "RDS"),
                                            preds_file = out_path("EEOSPreds"),
-                                           env_file = "Data/env.csv") {
+                                           env_file = out_path("env")) {
   fits <- read_required_csv(fits_file)
   if (!file.exists(subsets_file)) stop("Required file not found: ", subsets_file)
   eeos <- summarise_subgroup_eeos(readRDS(subsets_file), read_required_csv(preds_file),

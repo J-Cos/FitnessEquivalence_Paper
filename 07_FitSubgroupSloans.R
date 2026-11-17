@@ -13,7 +13,7 @@ source("Code/Functions/config.R"); check_project_root()
 source("Code/Functions/sloan_helpers.R")
 
 comm <- read_required_csv(out_path("comm"))
-env  <- read_required_csv("Data/env.csv")
+env  <- read_required_csv(out_path("env"))
 
 # 1) Non-overlapping 5-plot subgroups ordered by forest cover within region ---------------------
 subsets <- make_ordered_forest_cover_subgroups(comm, env)

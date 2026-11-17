@@ -107,4 +107,20 @@ test_that("raw stem and trait harmonisation fixes typos, filters DBH >= 10, and 
   expect_equal(j_row$lnSM, 3.0)
   expect_equal(j_row$LMA, 80.0)
   expect_true(is.na(j_row$Hmax) && is.na(j_row$DS))
+
+  pinho_env <- tibble(
+    Biome = c("Amazonia", "Natlantic"),
+    Region = c("PGM", "SGD"),
+    Region_Plot = c("P1", "SGD1"),
+    X = c(-47.5, -40.0),
+    Y = c(-3.0, -15.0),
+    PlotSize = c(0.25, 0.10),
+    fc2000 = c(0.6, 0.4)
+  )
+  jurua_coords <- tibble(Region_Plot = c("J1", "J2"), Site_name = c("S1", "S2"),
+                         X = c(-66.95, -68.28), Y = c(-4.77, -6.56))
+  env_h <- harmonise_env_table(pinho_env, jurua_coords)
+  expect_equal(nrow(env_h), 3)
+  expect_false("SGD1" %in% env_h$Region_Plot)
+  expect_equal(filter(env_h, Region == "Jurua")$fc2000, c(1, 1))
 })

@@ -1,8 +1,10 @@
 # --------------------------------------------
 # Purpose: Combines the Jurua data with the Pinho et al. data (Balbina, PGM, STM),
-#          harmonising taxon names and filling missing taxa in the trait table.
+#          harmonising taxon names, filling missing taxa in the trait table, and merging
+#          plot coordinates into a unified environmental table.
 # Input Origin Scripts: None (reads Data/)
-# Output: Outputs/comm.csv (one row per stem) and Outputs/traits.csv (one row per taxon)
+# Output: Outputs/comm.csv (one row per stem), Outputs/traits.csv (one row per taxon),
+#         and Outputs/env.csv (one row per plot)
 # ---------------------------------------------------
 
 suppressMessages(library(tidyverse))
@@ -10,9 +12,11 @@ source("Code/Functions/config.R"); check_project_root()
 source("Code/Functions/data_prep.R")
 
 # Load raw datasets ----------------------------------------------------------------------------
-jurua  <- read_required_csv("Data/Jurua_Flora_FullDB.csv")
-pinho  <- read_required_csv("Data/comm.csv")
-traits <- read_required_csv("Data/traits.csv")
+jurua        <- read_required_csv("Data/Jurua_Flora_FullDB.csv")
+pinho        <- read_required_csv("Data/comm.csv")
+traits       <- read_required_csv("Data/traits.csv")
+env          <- read_required_csv("Data/env.csv")
+jurua_coords <- read_required_csv("Data/Jurua_Plot_Locations.csv")
 
 # Community (stems) ----------------------------------------------------------------------------
 comm_new <- harmonise_stem_data(pinho, jurua, dbh_min = DBH_MIN_CM)
@@ -46,3 +50,9 @@ traits_new <- harmonise_trait_table(traits, jurua, dbh_min = DBH_MIN_CM)
 stopifnot(!anyDuplicated(traits_new$Binomial_correct),
           all(unique(comm_new$Binomial_correct) %in% traits_new$Binomial_correct))
 write.csv(traits_new, out_path("traits"), row.names = FALSE)
+
+# Environment & plot coordinates (plots) -------------------------------------------------------
+env_new <- harmonise_env_table(env, jurua_coords)
+stopifnot(!anyDuplicated(env_new$Region_Plot),
+          setequal(env_new$Region_Plot, unique(comm_new$Region_Plot)))
+write.csv(env_new, out_path("env"), row.names = FALSE)

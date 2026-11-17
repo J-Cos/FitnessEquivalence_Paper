@@ -13,7 +13,7 @@ source("Code/Functions/macrostates.R")
 
 comm   <- read_required_csv(out_path("comm"))
 traits <- read_required_csv(out_path("traits"))
-env    <- read_required_csv("Data/env.csv")
+env    <- read_required_csv(out_path("env"))
 
 macrostates <- compute_organism_stats(comm, traits, env) |>
   summarise_macrostates()
